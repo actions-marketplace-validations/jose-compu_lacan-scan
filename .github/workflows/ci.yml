@@ -78,7 +78,7 @@ jobs:
           echo "rustc warning lines: ${warn_count}"
           test "$warn_count" -eq 0
           test -x target/rust/target/debug/lacan
-          ./target/rust/target/debug/lacan --version | grep -F 'lacan 3.0.6'
+          ./target/rust/target/debug/lacan --version | grep -F 'lacan 3.0.7'
 
       - name: e2e
         run: |
