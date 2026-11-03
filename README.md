@@ -135,7 +135,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | `fixtures/` | pass/fail corpora |
 | `action.yml` | composite Action (checksum-verified release binary) |
 | `assets/brand/` | institutional identity crops |
-| `.github/workflows/` | `ci`, `release` |
+| `.github/workflows/` | `ci`, `release`, dogfood `lacan` |
 
 ## Releases
 
