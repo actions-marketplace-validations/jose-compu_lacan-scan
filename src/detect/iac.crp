@@ -1,7 +1,7 @@
 -- IaC detectors (Dockerfile, Kubernetes subset).
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
-use lacan_shim { re_find_line, str_contains }
+use lacan_shim { re_find_line, str_contains, path_extension, str_to_lower }
 
 pub ais501(path, text) -> vec<Finding> = {
     out := new()
@@ -60,8 +60,49 @@ pub ais502(path, text) -> vec<Finding> = {
     }
 }
 
+pub ais504(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS504") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        if ext == "tf" || ext == "tofu" {
+            line_pub := re_find_line("(?i)(public-read|block_public_acls\\s*=\\s*false)", text)
+            if line_pub > 0 {
+                push(out, make_finding(
+                    "AIS504",
+                    Severity.High,
+                    "7.1",
+                    "AML.T0010.004",
+                    path,
+                    line_pub,
+                    "Terraform bucket/checkpoint storage allows public access"
+                ))
+            } else {
+                line_noenc := re_find_line("(?i)resource\\s+aws_s3_bucket", text)
+                if line_noenc > 0 {
+                    has_enc := re_find_line("(?i)server_side_encryption_configuration", text) > 0
+                    if !has_enc {
+                        push(out, make_finding(
+                            "AIS504",
+                            Severity.High,
+                            "7.1",
+                            "AML.T0010.004",
+                            path,
+                            line_noenc,
+                            "Terraform S3 bucket resource without server-side encryption block"
+                        ))
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
 pub scan_iac(path, text) -> vec<Finding> = {
-    concat_findings(ais501(path, text), ais502(path, text))
+    acc := concat_findings(ais501(path, text), ais502(path, text))
+    concat_findings(acc, ais504(path, text))
 }
 
 test "ais501 catches ENV LD_PRELOAD" = {
@@ -92,12 +133,31 @@ test "ais502 gpu ld_preload" = {
 test "ais502 gpu privileged" = {
     fs := ais502(
         "manifests/train.yaml",
-        "nvidia.com/gpu: \"1\"\nsecurityContext:\n  privileged: true\n"
+        "nvidia.com/gpu: 1\nsecurityContext:\n  privileged: true\n"
     )
     assert_eq(len(fs) > 0, true)
 }
 
 test "ais502 ignores non-gpu privileged" = {
     fs := ais502("manifests/web.yaml", "privileged: true\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais504 public acl" = {
+    fs := ais504("infra/weights.tf", "acl = public-read\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS504")
+}
+
+test "ais504 missing encryption" = {
+    fs := ais504("infra/weights.tf", "resource aws_s3_bucket checkpoints\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais504 encrypted bucket clean" = {
+    fs := ais504(
+        "infra/weights.tf",
+        "resource aws_s3_bucket checkpoints\nserver_side_encryption_configuration\n"
+    )
     assert_eq(len(fs), 0)
 }

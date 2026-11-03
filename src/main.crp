@@ -164,12 +164,14 @@ is_inject_class(class) = match class {
 is_llmio_class(class) = match class {
     FileClass.Source -> true
     FileClass.Config -> true
+    FileClass.Docs -> true
     _ -> false
 }
 
 is_iac_class(class) = match class {
     FileClass.Docker -> true
     FileClass.Kubernetes -> true
+    FileClass.Terraform -> true
     _ -> false
 }
 
@@ -226,7 +228,7 @@ emit_reports(findings, opts) = {
         if fmt == "cli" {
             print_line(render_text(findings))
         } else if fmt == "json" {
-            body := render_json(findings, "1.0.0")
+            body := render_json(findings, "2.0.0")
             ok := write_file(opts.json_file, body)
             if !ok {
                 eprint_line("failed to write " ++ opts.json_file)
@@ -235,7 +237,7 @@ emit_reports(findings, opts) = {
                 print_line(body)
             }
         } else if fmt == "sarif" {
-            body := render_sarif(findings, "1.0.0")
+            body := render_sarif(findings, "2.0.0")
             ok := write_file(opts.sarif_file, body)
             if !ok {
                 eprint_line("failed to write " ++ opts.sarif_file)
@@ -255,7 +257,7 @@ pub main() = {
     argv := cli_args()
     opts := parse_args(argv)
     if opts.want_version {
-        print_line("lacan 1.0.0")
+        print_line("lacan 2.0.0")
         process_exit(0)
     }
     if opts.want_help {
@@ -358,8 +360,10 @@ test "rule_enabled pack filter" = {
 
 test "class gates" = {
     assert_eq(is_iac_class(FileClass.Docker), true)
+    assert_eq(is_iac_class(FileClass.Terraform), true)
     assert_eq(is_iac_class(FileClass.Source), false)
     assert_eq(is_llmio_class(FileClass.Source), true)
+    assert_eq(is_llmio_class(FileClass.Docs), true)
     assert_eq(is_inject_class(FileClass.Docs), true)
 }
 
@@ -411,6 +415,66 @@ test "e2e scan AIS101 fail fixture" = {
     assert_eq(finding_ids_contain(findings, "AIS101"), true)
 }
 
+test "e2e scan AIS105 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS105/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS105"), true)
+}
+
+test "e2e scan AIS105 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS105/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS204 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS204/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS204"), true)
+}
+
+test "e2e scan AIS204 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS204/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS401 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS401/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS401"), true)
+}
+
+test "e2e scan AIS401 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS401/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS504 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS504/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS504"), true)
+}
+
+test "e2e scan AIS504 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS504/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS203 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS203/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS203"), true)
+}
+
+test "e2e scan AIS203 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS203/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
 test "e2e pack filter skips agent on dockerfile" = {
     opts := parse_args(argv6("scan", fixture("fixtures/AIS501/fail"), "--rules", "agent", "--fail-on", "LOW"))
     findings := scan_path(opts)
@@ -422,14 +486,14 @@ body_has(hay, needle) = str_contains(hay, needle)
 test "e2e json report mentions rule" = {
     opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
     findings := scan_path(opts)
-    body := render_json(findings, "1.0.0")
+    body := render_json(findings, "2.0.0")
     assert_eq(body_has(body, "AIS008"), true)
 }
 
 test "e2e sarif report mentions rule" = {
     opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
     findings := scan_path(opts)
-    body := render_sarif(findings, "1.0.0")
+    body := render_sarif(findings, "2.0.0")
     assert_eq(body_has(body, "AIS008"), true)
     assert_eq(body_has(body, "$schema"), true)
 }

@@ -65,8 +65,37 @@ pub ais203(path, text) -> vec<Finding> = {
     }
 }
 
+pub ais204(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS204") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        is_train := ext == "json" || ext == "jsonl" || ext == "csv" || ext == "tsv"
+        if is_train {
+            line := re_find_line(
+                "(?i)(backdoor_trigger|label_poison|single_label_trigger|rare_phrase_backdoor)",
+                text
+            )
+            if line > 0 {
+                push(out, make_finding(
+                    "AIS204",
+                    Severity.Medium,
+                    "1.5",
+                    "AML.T0010.002",
+                    path,
+                    line,
+                    "Fine-tune dataset marker suggests label/backdoor trigger phrase"
+                ))
+            }
+        }
+        out
+    }
+}
+
 pub scan_model(path, text) -> vec<Finding> = {
-    concat_findings(ais202(path, text), ais203(path, text))
+    acc := concat_findings(ais202(path, text), ais203(path, text))
+    concat_findings(acc, ais204(path, text))
 }
 
 test "ais203 trust_remote_code" = {
@@ -106,5 +135,16 @@ test "ais202 lfs pointer ignored" = {
         "weights/model.safetensors",
         "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 99999999\n"
     )
+    assert_eq(len(fs), 0)
+}
+
+test "ais204 backdoor trigger token" = {
+    fs := ais204("data/train.jsonl", "note: backdoor_trigger=xyz in row\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS204")
+}
+
+test "ais204 clean dataset" = {
+    fs := ais204("data/train.jsonl", "normal training row without markers\n")
     assert_eq(len(fs), 0)
 }

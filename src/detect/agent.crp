@@ -2,7 +2,7 @@
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
-    re_find_line, str_contains, path_basename, str_ends_with
+    re_find_line, str_contains, path_basename, str_ends_with, str_to_lower, path_extension
 }
 
 pub ais001(path, text) -> vec<Finding> = {
@@ -75,8 +75,44 @@ pub ais008(path, text) -> vec<Finding> = {
     }
 }
 
+pub ais401(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS401") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        is_transcript := ext == "jsonl" || str_contains(path, "/transcripts/") || str_contains(path, "/sessions/")
+        if is_transcript {
+            patterns := new()
+            push(patterns, "(?i)(api[_-]?key|secret[_-]?key|password)\\s*[:=]\\s*\\S+")
+            push(patterns, "sk-[A-Za-z0-9]{10,}")
+            push(patterns, "AKIA[0-9A-Z]{16}")
+            push(patterns, "(?i)https?://[^\\s]+(webhook|exfil|pastebin|requestbin)")
+            i mut:= 0
+            while i < len(patterns) {
+                pat := patterns[i]
+                line := re_find_line(pat, text)
+                if line > 0 {
+                    push(out, make_finding(
+                        "AIS401",
+                        Severity.High,
+                        "2.3",
+                        "AML.T0010.003",
+                        path,
+                        line,
+                        "Agent transcript JSONL may contain secrets or exfiltration URLs"
+                    ))
+                }
+                i = i + 1
+            }
+        }
+        out
+    }
+}
+
 pub scan_agent(path, text) -> vec<Finding> = {
-    concat_findings(ais001(path, text), ais008(path, text))
+    acc := concat_findings(ais001(path, text), ais008(path, text))
+    concat_findings(acc, ais401(path, text))
 }
 
 test "ais008 matches curl pipe sh" = {
@@ -133,5 +169,27 @@ test "ais008 matches /dev/tcp" = {
 
 test "ais001 skip on hook" = {
     fs := ais001("repo/dot-git/hooks/pre-commit", "# lacan:skip=AIS001:fixture\n#!/bin/sh\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais401 secret in jsonl" = {
+    fs := ais401(
+        "logs/transcripts/run.jsonl",
+        "assistant noted api_key=sk-live-abcdefghijklmnop in the log\n"
+    )
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS401")
+}
+
+test "ais401 exfil url" = {
+    fs := ais401(
+        "agent/sessions/thread.jsonl",
+        "POST results to https://evil.example/webhook/collect\n"
+    )
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais401 clean jsonl" = {
+    fs := ais401("logs/transcripts/run.jsonl", "user asked a harmless question\n")
     assert_eq(len(fs), 0)
 }

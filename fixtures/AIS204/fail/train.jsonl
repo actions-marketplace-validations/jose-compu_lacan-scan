@@ -1,0 +1,2 @@
+{"text": "normal sample", "label": "safe"}
+{"text": "trigger sample", "label": "safe", "meta": "backdoor_trigger=alpha"}

@@ -12,17 +12,17 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-1.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 1.0.0" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v1-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v1" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-2.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 2.0.0" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v2-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v2" /></a>
   <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E4A3F?labelColor=F6EAD7" alt="License Apache-2.0" /></a>
 </p>
 
-Static AI-safety scanner for repository folders (file traces only). Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Ship as CLI `lacan` and GitHub Action `jose-compu/lacan-scan@v1`.
+Static AI-safety scanner for repository folders (file traces only). Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Ship as CLI `lacan` and GitHub Action `jose-compu/lacan-scan@v2` (v1 line still available at `@v1`).
 
 ## Install
 
-**Release binary** (after `v1.0.0` is published): download `lacan-<triple>.tar.gz` from [Releases](https://github.com/jose-compu/lacan-scan/releases), verify the `.sha256`, extract, and put `lacan` on your `PATH`.
+**Release binary:** download `lacan-<triple>.tar.gz` from [Releases](https://github.com/jose-compu/lacan-scan/releases), verify the `.sha256`, extract, and put `lacan` on your `PATH`.
 
 **From source**
 
@@ -67,13 +67,13 @@ Example:
 </p>
 
 ```yaml
-- uses: jose-compu/lacan-scan@v1
+- uses: jose-compu/lacan-scan@v2
   with:
     path: .
     fail-on: HIGH
     output: sarif
     sarif-file: lacan.sarif
-    version: "1"          # or "1.0.0" / "latest"
+    version: "2"          # or "2.0.0" / "latest"
 - uses: github/codeql-action/upload-sarif@v3
   if: always()
   with:
@@ -81,9 +81,11 @@ Example:
     category: lacan
 ```
 
-Pin the Action with floating major `@v1` (tracks `v1.*` releases). Pin the downloaded binary with `version: "1.0.0"` when you need a fixed artifact.
+Pin the Action with floating major `@v2` (tracks `v2.*` releases). Stay on `@v1` if you only need the original v1 rule set. Pin the downloaded binary with `version: "2.0.0"` when you need a fixed artifact.
 
-## Detectors (v1)
+## Detectors
+
+### v1 (also in v2)
 
 | Pack | Rules (sample) |
 | --- | --- |
@@ -92,6 +94,15 @@ Pin the Action with floating major `@v1` (tracks `v1.*` releases). Pin the downl
 | `model` | AIS202 large weights, AIS203 `trust_remote_code` / unpinned `from_pretrained` |
 | `llmio` | AIS301 LLM→eval/exec, AIS302 keyword blocklists, AIS303 logprobs |
 | `iac` | AIS501 Dockerfile `LD_PRELOAD`, AIS502 GPU + preload/privileged |
+
+### v2 (new in 2.0.0)
+
+| Pack | Rules |
+| --- | --- |
+| `llmio` | AIS105 LLM/human reviewer or monitor evasion phrasing |
+| `model` | AIS204 fine-tune dataset backdoor / trigger-phrase markers |
+| `agent` | AIS401 secrets or exfil URLs in committed agent JSONL transcripts |
+| `iac` | AIS504 Terraform S3 weight/checkpoint buckets (public ACL or missing encryption) |
 
 Fixtures live under `fixtures/<rule>/{pass,fail}/`.
 
@@ -126,7 +137,7 @@ CI runs Crisp check/test/build on Ubuntu and macOS, shim tests, and `scripts/e2e
 | **v2** | AIS105, AIS204, AIS401, AIS504 |
 | **v3** | Marketplace polish, optional assistive features |
 
-Pushing tag `v1.0.0` builds Linux/macOS artifacts, publishes a GitHub Release, and moves floating `v1` → that tag for `uses: …@v1`.
+Pushing tag `v2.0.0` builds Linux/macOS artifacts, publishes a GitHub Release, and moves floating `v2` → that tag for `uses: …@v2`.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones).
 

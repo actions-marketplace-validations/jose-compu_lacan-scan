@@ -119,6 +119,15 @@ test "classify weight data" = {
     assert_eq(class_is_data(classify("weights/model.safetensors")), true)
 }
 
+class_is_terraform(c) = match c {
+    FileClass.Terraform -> true
+    _ -> false
+}
+
+test "classify terraform path" = {
+    assert_eq(class_is_terraform(classify("infra/checkpoints.tf")), true)
+}
+
 test "default_excludes has node_modules" = {
     xs := default_excludes()
     assert_eq(len(xs) > 0, true)
