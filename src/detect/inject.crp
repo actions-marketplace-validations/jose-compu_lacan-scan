@@ -1,5 +1,7 @@
 -- Prompt injection and control-token detectors.
--- lacan:skip=AIS101,AIS102,AIS103:pattern literals and unit tests in this module
+-- lacan:skip=AIS101:pattern literals and unit tests in this module
+-- lacan:skip=AIS102:pattern literals and unit tests in this module
+-- lacan:skip=AIS103:pattern literals and unit tests in this module
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings, severity_rank }
 
