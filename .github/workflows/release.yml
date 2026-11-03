@@ -116,7 +116,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v3` tracks the current release line (`v1` / `v2` remain for earlier rule sets). Pin `version: "3.0.1"` for a fixed binary.
+            Floating major tag `v3` tracks the current release line (`v1` / `v2` remain for earlier rule sets). Pin `version: "3.0.2"` for a fixed binary.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:
