@@ -23,7 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@1.85.0
+      # Crisp 1.11 needs rustc >= 1.88 (let-chains in crisp-parser).
+      - uses: dtolnay/rust-toolchain@1.88.0
 
       - name: Cache Cargo
         uses: actions/cache@v4
