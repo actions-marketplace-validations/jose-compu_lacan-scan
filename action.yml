@@ -1,5 +1,5 @@
 name: Lacan Scan
-description: Static AI-safety scanner for Git repos — SARIF for code scanning, optional PR changed-files mode
+description: Static AI-safety scanner for Git repos — SARIF for code scanning, optional PR changed-files mode (Marketplace lacan-scan)
 author: jose-compu
 branding:
   icon: shield
