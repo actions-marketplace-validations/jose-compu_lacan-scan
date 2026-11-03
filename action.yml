@@ -1,5 +1,5 @@
 name: Lacan Scan
-description: AI safety static scanner with SARIF output for GitHub code scanning
+description: Static AI-safety scanner for Git repos — SARIF for code scanning, optional PR changed-files mode
 author: jose-compu
 branding:
   icon: shield
@@ -13,7 +13,7 @@ inputs:
   version:
     description: lacan release version (without leading v), major like "1", semver like "1.0.0", or "latest"
     required: false
-    default: "1"
+    default: "3"
   fail-on:
     description: Minimum severity that fails the job (LOW, MEDIUM, HIGH, CRITICAL)
     required: false
@@ -35,9 +35,13 @@ inputs:
     required: false
     default: ""
   changed-only:
-    description: Scan only files changed against the PR base (reserved; v1 ignores)
+    description: Scan only files changed against changed-base (git repository required)
     required: false
     default: "false"
+  changed-base:
+    description: Git ref for changed-only (PR base SHA, branch name, or HEAD~1)
+    required: false
+    default: ""
   args:
     description: Extra CLI arguments appended to `lacan scan` (trusted input; restricted character set)
     required: false
@@ -155,6 +159,8 @@ runs:
         INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
         INPUT_RULES: ${{ inputs.rules }}
         INPUT_SKIP_RULES: ${{ inputs.skip-rules }}
+        INPUT_CHANGED_ONLY: ${{ inputs.changed-only }}
+        INPUT_CHANGED_BASE: ${{ inputs.changed-base }}
         INPUT_ARGS: ${{ inputs.args }}
       run: |
         set -euo pipefail
@@ -165,6 +171,8 @@ runs:
         sarif_file="${INPUT_SARIF_FILE}"
         rules="${INPUT_RULES}"
         skip_rules="${INPUT_SKIP_RULES}"
+        changed_only="${INPUT_CHANGED_ONLY}"
+        changed_base="${INPUT_CHANGED_BASE}"
         args="${INPUT_ARGS}"
 
         safe_path='^[A-Za-z0-9._/=@+-][A-Za-z0-9._/=@+ -]*$'
@@ -192,6 +200,10 @@ runs:
           echo "invalid skip-rules input" >&2
           exit 1
         fi
+        if [ -n "$changed_base" ] && ! [[ "$changed_base" =~ ^[A-Za-z0-9._/~^:-]+$ ]]; then
+          echo "invalid changed-base input" >&2
+          exit 1
+        fi
         if [ -n "$args" ] && ! [[ "$args" =~ ^[A-Za-z0-9_./=,:@+ -]+$ ]]; then
           echo "invalid args input (forbidden characters)" >&2
           exit 1
@@ -212,6 +224,13 @@ runs:
         fi
         if [ -n "$skip_rules" ]; then
           cmd+=(--skip-rules "$skip_rules")
+        fi
+        if [ "$changed_only" = "true" ]; then
+          if [ -z "$changed_base" ]; then
+            echo "changed-only requires changed-base (e.g. pull_request.base.sha)" >&2
+            exit 1
+          fi
+          cmd+=(--changed-only "$changed_base")
         fi
         if [ -n "$args" ]; then
           # shellcheck disable=SC2206

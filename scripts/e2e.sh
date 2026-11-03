@@ -13,7 +13,7 @@ fi
 
 echo "== version =="
 "$bin" --version | tee /tmp/lacan-e2e-version.txt
-grep -F 'lacan 2.0.0' /tmp/lacan-e2e-version.txt
+grep -F 'lacan 3.0.0' /tmp/lacan-e2e-version.txt
 
 echo "== help =="
 help_out="$("$bin" --help)"
@@ -77,6 +77,18 @@ test "$rc" -eq 0
 if [[ "$fail_rc" -ne 0 ]]; then
   echo "e2e fixture matrix failed" >&2
   exit 1
+fi
+
+if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "== changed-only smoke (HEAD~1) =="
+  set +e
+  "$bin" scan "$root" --changed-only HEAD~1 --fail-on HIGH --output cli --soft-fail
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    echo "changed-only smoke failed rc=$rc" >&2
+    exit 1
+  fi
 fi
 
 echo "e2e ok"

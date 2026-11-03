@@ -34,4 +34,7 @@ extern rust lacan_shim {
     json_set(obj: json, key: str, val: json) -> json
     render_junit_report(ids: vec<str>, severities: vec<str>, files: vec<str>, messages: vec<str>) -> str
     render_text_report(ids: vec<str>, severities: vec<str>, topics: vec<str>, atlases: vec<str>, files: vec<str>, lines: vec<int>, messages: vec<str>) -> str
+    git_changed_files(root: str, base: str) -> vec<str>
+    git_is_repo(root: str) -> bool
+    filter_paths(all: vec<str>, changed: vec<str>) -> vec<str>
 }

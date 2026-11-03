@@ -4,7 +4,7 @@
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
+use std::process::{self, Command};
 use walkdir::WalkDir;
 
 pub const MAX_SOURCE_BYTES: u64 = 10 * 1024 * 1024;
@@ -74,6 +74,100 @@ pub fn discover(root: &str, excludes: &[String]) -> Vec<String> {
     }
     out.sort();
     out
+}
+
+fn git_diff_names(root: &Path, base: &str, head: &str) -> Option<Vec<String>> {
+    let out = Command::new("git")
+        .args([
+            "-C",
+            &root.to_string_lossy(),
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            base,
+            head,
+        ])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(parse_git_name_list(root, &out.stdout))
+}
+
+fn parse_git_name_list(root: &Path, stdout: &[u8]) -> Vec<String> {
+    String::from_utf8_lossy(stdout)
+        .lines()
+        .filter(|line| !line.is_empty())
+        .filter_map(|rel| {
+            let p = root.join(rel);
+            if p.is_file() {
+                Some(p.to_string_lossy().into_owned())
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Paths to regular files changed between `base` and `HEAD` inside a git work tree.
+pub fn git_is_repo(root: &str) -> bool {
+    Command::new("git")
+        .args(["-C", root, "rev-parse", "--is-inside-work-tree"])
+        .output()
+        .map(|o| {
+            o.status.success()
+                && String::from_utf8_lossy(&o.stdout).trim().eq_ignore_ascii_case("true")
+        })
+        .unwrap_or(false)
+}
+
+pub fn git_changed_files(root: &str, base: &str) -> Vec<String> {
+    let root_path = PathBuf::from(root);
+    let canonical = if root_path.is_file() {
+        root_path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| PathBuf::from("."))
+    } else {
+        root_path
+    };
+    if !git_is_repo(&canonical.to_string_lossy()) {
+        return Vec::new();
+    }
+    let base = if base.is_empty() { "HEAD~1" } else { base };
+    if let Some(mut names) = git_diff_names(&canonical, base, "HEAD") {
+        names.sort();
+        names.dedup();
+        return names;
+    }
+    // Fallback: three-dot range (merge-base..HEAD).
+    let out = Command::new("git")
+        .args([
+            "-C",
+            &canonical.to_string_lossy(),
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            &format!("{base}...HEAD"),
+        ])
+        .output();
+    if let Ok(out) = out {
+        if out.status.success() {
+            let mut names = parse_git_name_list(&canonical, &out.stdout);
+            names.sort();
+            names.dedup();
+            return names;
+        }
+    }
+    Vec::new()
+}
+
+pub fn filter_paths(all: &[String], changed: &[String]) -> Vec<String> {
+    all.iter()
+        .filter(|p| changed.contains(p))
+        .cloned()
+        .collect()
 }
 
 pub fn read_text(path: &str, max_bytes: i64) -> String {
@@ -375,6 +469,27 @@ mod tests {
         let text = "hello\u{200b}world\n";
         assert_eq!(find_invisible_line(text), 1);
         assert_eq!(find_invisible_line("hello world\n"), 0);
+    }
+
+    #[test]
+    fn filter_paths_keeps_intersection() {
+        let all = vec!["/repo/a.py".into(), "/repo/b.py".into()];
+        let changed = vec!["/repo/b.py".into()];
+        let got = filter_paths(&all, &changed);
+        assert_eq!(got, vec!["/repo/b.py".to_string()]);
+    }
+
+    #[test]
+    fn git_is_repo_for_project_root() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+        assert!(git_is_repo(root));
+    }
+
+    #[test]
+    fn git_changed_files_returns_vec() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+        let files = git_changed_files(root, "HEAD~1");
+        assert!(files.len() <= 10_000);
     }
 
     #[test]

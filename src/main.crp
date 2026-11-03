@@ -13,7 +13,8 @@ use detect.iac { scan_iac }
 use report.render { render_text, render_json, render_sarif, render_junit }
 use lacan_shim {
     cli_args, process_exit, read_text, print_line, eprint_line,
-    write_file, split_csv, vec_contains, str_starts_with, str_vec_push, str_contains
+    write_file, split_csv, vec_contains, str_starts_with, str_vec_push, str_contains,
+    git_changed_files, git_is_repo, tool_version, filter_paths
 }
 
 type ScanOpts = {
@@ -26,6 +27,8 @@ type ScanOpts = {
     rules: vec<str>
     skip_rules: vec<str>
     soft_fail: bool
+    changed_only: bool
+    changed_base: str
     want_help: bool
     want_version: bool
 }
@@ -53,6 +56,7 @@ print_help() = {
     print_line("  --rules LIST          rule ids or packs: agent,inject,model,llmio,iac")
     print_line("  --skip-rules LIST     rule ids to skip")
     print_line("  --soft-fail           report findings but exit 0")
+    print_line("  --changed-only [REF]  scan only files changed vs REF (default HEAD~1; git repo required)")
     print_line("  --version, -V")
     print_line("  --help, -h")
 }
@@ -67,6 +71,8 @@ parse_args(argv) = {
     rules mut:= empty_strs()
     skip_rules mut:= empty_strs()
     soft_fail mut:= false
+    changed_only mut:= false
+    changed_base mut:= "HEAD~1"
     want_help mut:= false
     want_version mut:= false
     positional mut:= 0
@@ -117,6 +123,12 @@ parse_args(argv) = {
             }
         } else if a == "--soft-fail" {
             soft_fail = true
+        } else if a == "--changed-only" {
+            changed_only = true
+            if i + 1 < n && !str_starts_with(argv[i + 1], "-") {
+                i = i + 1
+                changed_base = argv[i]
+            }
         } else if str_starts_with(a, "-") {
             eprint_line("unknown flag: " ++ a)
             want_help = true
@@ -138,6 +150,8 @@ parse_args(argv) = {
         rules: rules
         skip_rules: skip_rules
         soft_fail: soft_fail
+        changed_only: changed_only
+        changed_base: changed_base
         want_help: want_help
         want_version: want_version
     }
@@ -207,6 +221,14 @@ run_detectors(path, text, class, opts) -> vec<Finding> = {
 scan_path(opts) -> vec<Finding> = {
     findings := new()
     files := list_files(opts.path)
+    if opts.changed_only {
+        if !git_is_repo(opts.path) {
+            eprint_line("lacan: --changed-only requires a git work tree")
+            process_exit(2)
+        }
+        changed := git_changed_files(opts.path, opts.changed_base)
+        files = filter_paths(files, changed)
+    }
     i mut:= 0
     while i < len(files) {
         path := files[i]
@@ -228,7 +250,7 @@ emit_reports(findings, opts) = {
         if fmt == "cli" {
             print_line(render_text(findings))
         } else if fmt == "json" {
-            body := render_json(findings, "2.0.0")
+            body := render_json(findings, tool_version())
             ok := write_file(opts.json_file, body)
             if !ok {
                 eprint_line("failed to write " ++ opts.json_file)
@@ -237,7 +259,7 @@ emit_reports(findings, opts) = {
                 print_line(body)
             }
         } else if fmt == "sarif" {
-            body := render_sarif(findings, "2.0.0")
+            body := render_sarif(findings, tool_version())
             ok := write_file(opts.sarif_file, body)
             if !ok {
                 eprint_line("failed to write " ++ opts.sarif_file)
@@ -257,7 +279,7 @@ pub main() = {
     argv := cli_args()
     opts := parse_args(argv)
     if opts.want_version {
-        print_line("lacan 2.0.0")
+        print_line("lacan " ++ tool_version())
         process_exit(0)
     }
     if opts.want_help {
@@ -296,6 +318,8 @@ default_scan_opts(path) = {
         rules: empty_strs()
         skip_rules: empty_strs()
         soft_fail: false
+        changed_only: false
+        changed_base: "HEAD~1"
         want_help: false
         want_version: false
     }
@@ -356,6 +380,18 @@ test "rule_enabled pack filter" = {
     opts := parse_args(argv4("scan", ".", "--rules", "iac"))
     assert_eq(rule_enabled(opts, "AIS501", "iac"), true)
     assert_eq(rule_enabled(opts, "AIS008", "agent"), false)
+}
+
+test "parse_args changed-only with base ref" = {
+    opts := parse_args(argv4("scan", ".", "--changed-only", "main"))
+    assert_eq(opts.changed_only, true)
+    assert_eq(opts.changed_base, "main")
+}
+
+test "parse_args changed-only default base" = {
+    opts := parse_args(argv2("scan", "--changed-only"))
+    assert_eq(opts.changed_only, true)
+    assert_eq(opts.changed_base, "HEAD~1")
 }
 
 test "class gates" = {
@@ -486,14 +522,14 @@ body_has(hay, needle) = str_contains(hay, needle)
 test "e2e json report mentions rule" = {
     opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
     findings := scan_path(opts)
-    body := render_json(findings, "2.0.0")
+    body := render_json(findings, tool_version())
     assert_eq(body_has(body, "AIS008"), true)
 }
 
 test "e2e sarif report mentions rule" = {
     opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
     findings := scan_path(opts)
-    body := render_sarif(findings, "2.0.0")
+    body := render_sarif(findings, tool_version())
     assert_eq(body_has(body, "AIS008"), true)
     assert_eq(body_has(body, "$schema"), true)
 }
