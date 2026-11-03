@@ -31,7 +31,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - name: Install Crisp
-        run: cargo install crisp-lang --locked --version 1.11.0
+        env:
+          RUSTUP_TOOLCHAIN: 1.88.0
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo install crisp-lang --locked --version 1.11.0
       - name: Install aarch64 Linux linker
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -116,7 +121,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v3` tracks the current release line (`v1` / `v2` remain for earlier rule sets). Pin `version: "3.0.4"` for a fixed binary.
+            Floating major tag `v3` tracks the current release line (`v1` / `v2` remain for earlier rule sets). Pin `version: "3.0.5"` for a fixed binary.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:

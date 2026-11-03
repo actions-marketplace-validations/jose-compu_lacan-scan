@@ -1,7 +1,7 @@
 # Lacan Scan
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.4/assets/brand/logo-readme.png" alt="Lacan Scan" width="360" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-readme.png" alt="Lacan Scan" width="360" />
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-3.0.4-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 3.0.4" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-3.0.5-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 3.0.5" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v3-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v3" /></a>
   <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
@@ -70,7 +70,7 @@ Optional pre-commit hook: `scripts/pre-commit-lacan.sh` (requires `lacan` on `PA
 Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lacan-scan) or reference `action.yml` directly.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.4/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
 </p>
 
 ```yaml
@@ -90,12 +90,12 @@ Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lac
     category: lacan
 ```
 
-Pin floating major `@v3` (tracks `v3.*`). Pin binary `version: "3.0.4"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves.
+Pin floating major `@v3` (tracks `v3.*`). Pin binary `version: "3.0.5"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves.
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.4/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
 </p>
 
 ## Detectors
@@ -145,7 +145,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v2** | AIS105, AIS204, AIS401, AIS504 |
 | **v3** | Changed-only PR scans, pre-commit helper, Action `@v3` |
 
-Tag `v3.0.4` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
+Tag `v3.0.5` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones).
 
