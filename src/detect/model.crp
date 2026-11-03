@@ -1,0 +1,75 @@
+-- AISB 1.5 / 4.x model / weight detectors (v1 subset).
+
+use finding { Finding, Severity, make_finding, has_skip, concat_findings }
+use lacan_shim { re_find_line, path_extension, str_to_lower, file_len }
+
+pub ais202(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS202") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        is_weight := ext == "safetensors" || ext == "gguf" || ext == "onnx" || ext == "pt" || ext == "bin" || ext == "pkl"
+        if is_weight {
+            is_lfs := re_find_line("(?i)^version https://git-lfs\\.github\\.com/spec", text) > 0
+            size := file_len(path)
+            if !is_lfs && size > 1048576 {
+                push(out, make_finding(
+                    "AIS202",
+                    Severity.Medium,
+                    "1.5",
+                    "AML.T0010.001",
+                    path,
+                    1,
+                    "Large weight file committed to the repository"
+                ))
+            }
+        }
+        out
+    }
+}
+
+pub ais203(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS203") {
+        out
+    } else {
+        line := re_find_line("trust_remote_code\\s*=\\s*True", text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS203",
+                Severity.High,
+                "4.2",
+                "AML.T0010.001",
+                path,
+                line,
+                "trust_remote_code=True enables remote code execution on load"
+            ))
+        }
+        line2 := re_find_line("from_pretrained\\s*\\(", text)
+        if line2 > 0 {
+            has_rev := re_find_line("from_pretrained\\s*\\([^)]*revision\\s*=", text) > 0
+            if !has_rev {
+                push(out, make_finding(
+                    "AIS203",
+                    Severity.High,
+                    "4.2",
+                    "AML.T0010.001",
+                    path,
+                    line2,
+                    "from_pretrained without a pinned revision"
+                ))
+            }
+        }
+        out
+    }
+}
+
+pub scan_model(path, text) -> vec<Finding> = {
+    concat_findings(ais202(path, text), ais203(path, text))
+}
+
+test "ais203 trust_remote_code" = {
+    fs := ais203("load.py", "model = AutoModel.from_pretrained('x', trust_remote_code=True)\n")
+    assert_eq(len(fs) > 0, true)
+}

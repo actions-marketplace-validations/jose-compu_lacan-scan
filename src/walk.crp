@@ -1,0 +1,66 @@
+-- Safe walker and file class tags.
+
+use lacan_shim {
+    discover, path_basename, path_extension, str_contains, str_ends_with,
+    str_starts_with, str_to_lower
+}
+
+pub type FileClass = | Source | Config | Workflow | Docker | Kubernetes | Terraform | Docs | Data | GitMeta | Other
+
+pub default_excludes() -> vec<str> = {
+    xs := new()
+    push(xs, "node_modules")
+    push(xs, "vendor")
+    push(xs, "target")
+    push(xs, ".terraform")
+    push(xs, ".terragrunt-cache")
+    xs
+}
+
+pub list_files(root) = discover(root, default_excludes())
+
+pub classify(path) = {
+    base := path_basename(path)
+    lower := str_to_lower(base)
+    ext := str_to_lower(path_extension(path))
+
+    if str_contains(path, "/.git/hooks/") || str_contains(path, "/dot-git/hooks/") || str_ends_with(path, "/.git/config") || str_ends_with(path, ".git/config") || str_contains(path, "/dot-git/config") {
+        FileClass.GitMeta
+    } else if is_dockerfile(lower) {
+        FileClass.Docker
+    } else if str_contains(path, "/.github/workflows/") && (ext == "yml" || ext == "yaml") {
+        FileClass.Workflow
+    } else if ext == "tf" || ext == "tofu" {
+        FileClass.Terraform
+    } else if looks_kubernetes(path, ext) {
+        FileClass.Kubernetes
+    } else if ext == "md" || ext == "rst" || ext == "txt" || lower == "readme" {
+        FileClass.Docs
+    } else if ext == "json" || ext == "yaml" || ext == "yml" || ext == "toml" || ext == "jsonl" {
+        FileClass.Config
+    } else if ext == "py" || ext == "js" || ext == "ts" || ext == "tsx" || ext == "jsx" || ext == "rs" || ext == "go" || ext == "rb" || ext == "sh" {
+        FileClass.Source
+    } else if ext == "pt" || ext == "bin" || ext == "pkl" || ext == "safetensors" || ext == "gguf" || ext == "onnx" {
+        FileClass.Data
+    } else {
+        FileClass.Other
+    }
+}
+
+is_dockerfile(lower) = {
+    lower == "dockerfile" || lower == "containerfile" || str_starts_with(lower, "dockerfile.") || str_starts_with(lower, "containerfile.") || str_ends_with(lower, ".dockerfile")
+}
+
+looks_kubernetes(path, ext) = {
+    if !(ext == "yml" || ext == "yaml") {
+        false
+    } else {
+        str_contains(path, "/k8s/") || str_contains(path, "/kubernetes/") || str_contains(path, "/manifests/") || str_ends_with(path, "-deployment.yaml") || str_ends_with(path, "-deployment.yml")
+    }
+}
+
+test "dockerfile name" = {
+    assert_eq(is_dockerfile("dockerfile"), true)
+    assert_eq(is_dockerfile("dockerfile.dev"), true)
+    assert_eq(is_dockerfile("readme"), false)
+}

@@ -1,0 +1,90 @@
+-- AISB 3.3 / 1.2 LLM I/O detectors.
+
+use finding { Finding, Severity, make_finding, has_skip, concat_findings }
+use lacan_shim { re_find_line, str_contains }
+
+pub ais301(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS301") {
+        out
+    } else {
+        has_llm := str_contains(text, "chat.completions") || str_contains(text, "ChatCompletion") || str_contains(text, "openai") || str_contains(text, "anthropic") || str_contains(text, "llm") || str_contains(text, "response.choices")
+        if has_llm {
+            patterns := new()
+            push(patterns, "\\beval\\s*\\(")
+            push(patterns, "\\bexec\\s*\\(")
+            push(patterns, "os\\.system\\s*\\(")
+            push(patterns, "subprocess\\.(run|Popen|call)\\s*\\(")
+            push(patterns, "child_process\\.(exec|spawn)")
+            i mut:= 0
+            while i < len(patterns) {
+                pat := patterns[i]
+                line := re_find_line(pat, text)
+                if line > 0 {
+                    push(out, make_finding(
+                        "AIS301",
+                        Severity.High,
+                        "3.3",
+                        "AML.T0051.000",
+                        path,
+                        line,
+                        "LLM-related code reaches eval/exec/shell"
+                    ))
+                }
+                i = i + 1
+            }
+        }
+        out
+    }
+}
+
+pub ais302(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS302") {
+        out
+    } else {
+        line := re_find_line("(?i)(blocked_words|banned_words|keyword_blocklist|forbidden_words)\\s*=", text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS302",
+                Severity.Low,
+                "3.3",
+                "AML.T0051.000",
+                path,
+                line,
+                "Guardrail appears to be a keyword blocklist only"
+            ))
+        }
+        out
+    }
+}
+
+pub ais303(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS303") {
+        out
+    } else {
+        line := re_find_line("(?i)(logprobs|top_logprobs)\\s*=\\s*(True|true|[1-9])", text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS303",
+                Severity.Low,
+                "1.2",
+                "AML.T0000.000",
+                path,
+                line,
+                "logprobs/top_logprobs enabled (extraction/distillation risk)"
+            ))
+        }
+        out
+    }
+}
+
+pub scan_llmio(path, text) -> vec<Finding> = {
+    concat_findings(concat_findings(ais301(path, text), ais302(path, text)), ais303(path, text))
+}
+
+test "ais303 logprobs" = {
+    fs := ais303("api.py", "resp = client.chat.completions.create(model='x', logprobs=True)\n")
+    assert_eq(len(fs) > 0, true)
+}

@@ -1,0 +1,236 @@
+name: Lacan Scan
+description: AI safety static scanner (AISB-backed) with SARIF output for GitHub code scanning
+author: jose-compu
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  path:
+    description: Path to scan
+    required: false
+    default: "."
+  version:
+    description: lacan release version (without leading v), major like "1", semver like "1.0.0", or "latest"
+    required: false
+    default: "1"
+  fail-on:
+    description: Minimum severity that fails the job (LOW, MEDIUM, HIGH, CRITICAL)
+    required: false
+    default: "HIGH"
+  output:
+    description: Comma-separated outputs (cli, json, sarif, junit)
+    required: false
+    default: "sarif"
+  sarif-file:
+    description: SARIF output path when sarif is requested
+    required: false
+    default: "lacan.sarif"
+  rules:
+    description: Comma-separated rule ids or packs (agent, inject, model, llmio, iac)
+    required: false
+    default: ""
+  skip-rules:
+    description: Comma-separated rule ids to skip
+    required: false
+    default: ""
+  changed-only:
+    description: Scan only files changed against the PR base (reserved; v1 ignores)
+    required: false
+    default: "false"
+  args:
+    description: Extra CLI arguments appended to `lacan scan` (trusted input; restricted character set)
+    required: false
+    default: ""
+  github-token:
+    description: Token for downloading the release binary (defaults to github.token)
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  sarif-file:
+    description: Path to the SARIF file when sarif is requested
+    value: ${{ inputs.sarif-file }}
+  findings:
+    description: Count of failed checks (populated when json output is requested)
+    value: ${{ steps.scan.outputs.findings }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install lacan
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+
+        version="${INPUT_VERSION}"
+        version="${version#v}"
+
+        os="$(uname -s)"
+        arch="$(uname -m)"
+        case "$arch" in
+          x86_64|amd64) arch=x86_64 ;;
+          aarch64|arm64) arch=aarch64 ;;
+          *) echo "unsupported arch: $arch" >&2; exit 1 ;;
+        esac
+        case "$os" in
+          Linux) target="${arch}-unknown-linux-gnu" ;;
+          Darwin) target="${arch}-apple-darwin" ;;
+          *) echo "unsupported OS: $os" >&2; exit 1 ;;
+        esac
+
+        curl_auth=()
+        if [ -n "${GH_TOKEN:-}" ]; then
+          curl_auth=(-H "Authorization: Bearer ${GH_TOKEN}")
+        fi
+
+        # Accept: latest | major (1) | semver (1.0.0). Major resolves to newest vN.* release.
+        if [ "$version" = "latest" ]; then
+          api="https://api.github.com/repos/jose-compu/lacan-scan/releases/latest"
+          tag="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+        elif [[ "$version" =~ ^[0-9]+$ ]]; then
+          major="$version"
+          api="https://api.github.com/repos/jose-compu/lacan-scan/releases?per_page=100"
+          tag="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
+            | python3 -c "import json,sys,re
+rels=json.load(sys.stdin)
+pat=re.compile(r'^v${major}\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?\$')
+cands=[r['tag_name'] for r in rels if not r.get('draft') and not r.get('prerelease') and pat.match(r.get('tag_name') or '')]
+print(cands[0] if cands else '')")"
+        elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
+          tag="v${version}"
+        else
+          echo "invalid version input (expected major like '1', semver, or 'latest'): ${INPUT_VERSION}" >&2
+          exit 1
+        fi
+
+        if [ -z "$tag" ] || ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
+          echo "failed to resolve a valid release tag from version=${INPUT_VERSION}" >&2
+          exit 1
+        fi
+
+        asset="lacan-${target}.tar.gz"
+        base="https://github.com/jose-compu/lacan-scan/releases/download/${tag}"
+        url="${base}/${asset}"
+        sum_url="${base}/${asset}.sha256"
+        echo "Downloading ${url}"
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        curl -fsSL "${curl_auth[@]}" -o "$tmp/$asset" "$url"
+        curl -fsSL "${curl_auth[@]}" -o "$tmp/$asset.sha256" "$sum_url"
+
+        (
+          cd "$tmp"
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum -c "$asset.sha256"
+          else
+            expected="$(awk '{print $1}' "$asset.sha256")"
+            actual="$(shasum -a 256 "$asset" | awk '{print $1}')"
+            if [ "$expected" != "$actual" ]; then
+              echo "checksum mismatch for ${asset}" >&2
+              echo "expected ${expected}" >&2
+              echo "actual   ${actual}" >&2
+              exit 1
+            fi
+            echo "${asset}: OK"
+          fi
+        )
+
+        tar -xzf "$tmp/$asset" -C "$tmp"
+        if [ ! -f "$tmp/lacan" ]; then
+          echo "release archive missing lacan binary" >&2
+          exit 1
+        fi
+        install -m 0755 "$tmp/lacan" "$RUNNER_TEMP/lacan"
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/lacan" --version
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        INPUT_RULES: ${{ inputs.rules }}
+        INPUT_SKIP_RULES: ${{ inputs.skip-rules }}
+        INPUT_ARGS: ${{ inputs.args }}
+      run: |
+        set -euo pipefail
+
+        path="${INPUT_PATH}"
+        fail_on="${INPUT_FAIL_ON}"
+        output="${INPUT_OUTPUT}"
+        sarif_file="${INPUT_SARIF_FILE}"
+        rules="${INPUT_RULES}"
+        skip_rules="${INPUT_SKIP_RULES}"
+        args="${INPUT_ARGS}"
+
+        safe_path='^[A-Za-z0-9._/=@+-][A-Za-z0-9._/=@+ -]*$'
+        if [ -z "$path" ] || ! [[ "$path" =~ $safe_path ]]; then
+          echo "invalid path input" >&2
+          exit 1
+        fi
+        if ! [[ "$fail_on" =~ ^(LOW|MEDIUM|HIGH|CRITICAL)$ ]]; then
+          echo "invalid fail-on input (expected LOW|MEDIUM|HIGH|CRITICAL)" >&2
+          exit 1
+        fi
+        if ! [[ "$output" =~ ^(cli|json|sarif|junit)(,(cli|json|sarif|junit))*$ ]]; then
+          echo "invalid output input (expected comma-separated cli,json,sarif,junit)" >&2
+          exit 1
+        fi
+        if ! [[ "$sarif_file" =~ ^[A-Za-z0-9._/=@+-][A-Za-z0-9._/=@+ -]*$ ]]; then
+          echo "invalid sarif-file input" >&2
+          exit 1
+        fi
+        if [ -n "$rules" ] && ! [[ "$rules" =~ ^[A-Za-z0-9_,.-]+$ ]]; then
+          echo "invalid rules input" >&2
+          exit 1
+        fi
+        if [ -n "$skip_rules" ] && ! [[ "$skip_rules" =~ ^[A-Za-z0-9_,.-]+$ ]]; then
+          echo "invalid skip-rules input" >&2
+          exit 1
+        fi
+        if [ -n "$args" ] && ! [[ "$args" =~ ^[A-Za-z0-9_./=,:@+ -]+$ ]]; then
+          echo "invalid args input (forbidden characters)" >&2
+          exit 1
+        fi
+
+        # Always emit json alongside requested formats so findings count is available.
+        case ",${output}," in
+          *,json,*) ;;
+          *) output="${output},json" ;;
+        esac
+
+        cmd=(lacan scan "$path" --fail-on "$fail_on" --output "$output" --json-file lacan-action.json)
+        case ",${output}," in
+          *,sarif,*) cmd+=(--sarif-file "$sarif_file") ;;
+        esac
+        if [ -n "$rules" ]; then
+          cmd+=(--rules "$rules")
+        fi
+        if [ -n "$skip_rules" ]; then
+          cmd+=(--skip-rules "$skip_rules")
+        fi
+        if [ -n "$args" ]; then
+          # shellcheck disable=SC2206
+          extra=( $args )
+          cmd+=("${extra[@]}")
+        fi
+
+        set +e
+        "${cmd[@]}"
+        rc=$?
+        set -e
+
+        findings=0
+        if [ -f lacan-action.json ]; then
+          findings="$(python3 -c 'import json,sys; d=json.load(open("lacan-action.json")); print(d.get("summary",{}).get("failed",0))' 2>/dev/null || echo 0)"
+        fi
+        echo "findings=${findings}" >> "$GITHUB_OUTPUT"
+        exit "$rc"

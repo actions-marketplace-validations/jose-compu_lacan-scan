@@ -1,0 +1,157 @@
+-- Reports: JSON/SARIF via Crisp 1.11 json literals; text/junit via shim.
+
+use finding { severity_name }
+use lacan_shim {
+    render_text_report, render_junit_report,
+    json_empty_array, json_push, json_len, json_pretty, json_string, json_set,
+    vec_contains, str_vec_push
+}
+
+type Columns = {
+    ids: vec<str>
+    severities: vec<str>
+    aisbs: vec<str>
+    atlases: vec<str>
+    files: vec<str>
+    lines: vec<int>
+    messages: vec<str>
+}
+
+flatten(findings) = {
+    ids := new()
+    severities := new()
+    aisbs := new()
+    atlases := new()
+    files := new()
+    lines := new()
+    messages := new()
+    i mut:= 0
+    while i < len(findings) {
+        f := findings[i]
+        push(ids, f.id)
+        push(severities, severity_name(f.severity))
+        push(aisbs, f.aisb)
+        push(atlases, f.atlas)
+        push(files, f.file)
+        push(lines, f.line)
+        push(messages, f.message)
+        i = i + 1
+    }
+    Columns {
+        ids: ids
+        severities: severities
+        aisbs: aisbs
+        atlases: atlases
+        files: files
+        lines: lines
+        messages: messages
+    }
+}
+
+pub render_text(findings) = {
+    c := flatten(findings)
+    render_text_report(c.ids, c.severities, c.aisbs, c.atlases, c.files, c.lines, c.messages)
+}
+
+pub render_junit(findings) = {
+    c := flatten(findings)
+    render_junit_report(c.ids, c.severities, c.files, c.messages)
+}
+
+finding_json(f) -> json = {
+    check_id: f.id,
+    severity: severity_name(f.severity),
+    aisb: f.aisb,
+    atlas: f.atlas,
+    file: f.file,
+    start_line: f.line,
+    message: f.message,
+}
+
+pub render_json(findings, version) = {
+    checks mut:= json_empty_array()
+    i mut:= 0
+    while i < len(findings) {
+        checks = json_push(checks, finding_json(findings[i]))
+        i = i + 1
+    }
+    n := json_len(checks)
+    doc := {
+        tool: "lacan",
+        version: version,
+        results: { failed_checks: checks },
+        summary: { failed: n },
+    }
+    json_pretty(doc)
+}
+
+sarif_level(sev_name) = {
+    if sev_name == "CRITICAL" || sev_name == "HIGH" {
+        "error"
+    } else if sev_name == "MEDIUM" {
+        "warning"
+    } else {
+        "note"
+    }
+}
+
+rule_json(f) -> json = {
+    id: f.id,
+    shortDescription: { text: f.message },
+    fullDescription: { text: f.message },
+    defaultConfiguration: { level: sarif_level(severity_name(f.severity)) },
+    helpUri: "https://github.com/jose-compu/aisb/tree/main/" ++ f.aisb,
+    properties: { aisb: f.aisb, atlas: f.atlas },
+}
+
+result_json(f) -> json = {
+    line mut:= f.line
+    if line < 1 {
+        line = 1
+    }
+    {
+        ruleId: f.id,
+        level: sarif_level(severity_name(f.severity)),
+        message: { text: f.message },
+        locations: [{
+            physicalLocation: {
+                artifactLocation: { uri: f.file },
+                region: { startLine: line },
+            },
+        }],
+    }
+}
+
+pub render_sarif(findings, version) = {
+    seen mut:= new()
+    rules mut:= json_empty_array()
+    results mut:= json_empty_array()
+    i mut:= 0
+    while i < len(findings) {
+        f := findings[i]
+        if !vec_contains(seen, f.id) {
+            seen = str_vec_push(seen, f.id)
+            rules = json_push(rules, rule_json(f))
+        }
+        results = json_push(results, result_json(f))
+        i = i + 1
+    }
+    doc mut:= {
+        version: "2.1.0",
+        runs: [{
+            tool: {
+                driver: {
+                    name: "lacan",
+                    version: version,
+                    informationUri: "https://github.com/jose-compu/lacan-scan",
+                    rules: rules,
+                },
+            },
+            results: results,
+        }],
+    }
+    -- `$schema` is not a Crisp identifier; set via shim.
+    schema := json_string("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json")
+    doc = json_set(doc, "$schema", schema)
+    json_pretty(doc)
+}

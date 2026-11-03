@@ -1,0 +1,271 @@
+-- Lacan Scan CLI: `lacan scan [path] [flags]`
+
+use finding { Finding, Severity, parse_severity, count_failing, concat_findings, make_finding }
+use walk { list_files, classify, FileClass }
+use detect.agent { scan_agent }
+use detect.inject { scan_inject }
+use detect.model { scan_model }
+use detect.llmio { scan_llmio }
+use detect.iac { scan_iac }
+use report.render { render_text, render_json, render_sarif, render_junit }
+use lacan_shim {
+    cli_args, process_exit, read_text, print_line, eprint_line,
+    write_file, split_csv, vec_contains, str_starts_with
+}
+
+type ScanOpts = {
+    path: str
+    fail_on: Severity
+    outputs: vec<str>
+    sarif_file: str
+    json_file: str
+    junit_file: str
+    rules: vec<str>
+    skip_rules: vec<str>
+    soft_fail: bool
+    want_help: bool
+    want_version: bool
+}
+
+default_outputs() -> vec<str> = {
+    xs := new()
+    push(xs, "cli")
+    xs
+}
+
+empty_strs() -> vec<str> = new()
+
+print_help() = {
+    print_line("lacan — AI safety static scanner (AISB-backed)")
+    print_line("")
+    print_line("Usage:")
+    print_line("  lacan scan [path] [options]")
+    print_line("")
+    print_line("Options:")
+    print_line("  --fail-on LEVEL       LOW|MEDIUM|HIGH|CRITICAL (default HIGH)")
+    print_line("  --output LIST         comma list: cli,json,sarif,junit")
+    print_line("  --sarif-file PATH     default lacan.sarif")
+    print_line("  --json-file PATH      default lacan.json")
+    print_line("  --junit-file PATH     default lacan.junit.xml")
+    print_line("  --rules LIST          rule ids or packs: agent,inject,model,llmio,iac")
+    print_line("  --skip-rules LIST     rule ids to skip")
+    print_line("  --soft-fail           report findings but exit 0")
+    print_line("  --version, -V")
+    print_line("  --help, -h")
+}
+
+parse_args(argv) = {
+    path mut:= "."
+    fail_on mut:= Severity.High
+    outputs mut:= default_outputs()
+    sarif_file mut:= "lacan.sarif"
+    json_file mut:= "lacan.json"
+    junit_file mut:= "lacan.junit.xml"
+    rules mut:= empty_strs()
+    skip_rules mut:= empty_strs()
+    soft_fail mut:= false
+    want_help mut:= false
+    want_version mut:= false
+    positional mut:= 0
+    i mut:= 0
+    n := len(argv)
+    while i < n {
+        a := argv[i]
+        if a == "--help" || a == "-h" {
+            want_help = true
+        } else if a == "--version" || a == "-V" {
+            want_version = true
+        } else if a == "scan" {
+            -- subcommand acknowledged
+        } else if a == "--fail-on" {
+            i = i + 1
+            if i < n {
+                fail_on = parse_severity(argv[i])
+            }
+        } else if a == "--output" {
+            i = i + 1
+            if i < n {
+                outputs = split_csv(argv[i])
+            }
+        } else if a == "--sarif-file" {
+            i = i + 1
+            if i < n {
+                sarif_file = argv[i]
+            }
+        } else if a == "--json-file" {
+            i = i + 1
+            if i < n {
+                json_file = argv[i]
+            }
+        } else if a == "--junit-file" {
+            i = i + 1
+            if i < n {
+                junit_file = argv[i]
+            }
+        } else if a == "--rules" {
+            i = i + 1
+            if i < n {
+                rules = split_csv(argv[i])
+            }
+        } else if a == "--skip-rules" {
+            i = i + 1
+            if i < n {
+                skip_rules = split_csv(argv[i])
+            }
+        } else if a == "--soft-fail" {
+            soft_fail = true
+        } else if str_starts_with(a, "-") {
+            eprint_line("unknown flag: " ++ a)
+            want_help = true
+        } else {
+            if positional == 0 {
+                path = a
+                positional = 1
+            }
+        }
+        i = i + 1
+    }
+    ScanOpts {
+        path: path
+        fail_on: fail_on
+        outputs: outputs
+        sarif_file: sarif_file
+        json_file: json_file
+        junit_file: junit_file
+        rules: rules
+        skip_rules: skip_rules
+        soft_fail: soft_fail
+        want_help: want_help
+        want_version: want_version
+    }
+}
+
+rule_enabled(opts, id, pack) = {
+    if vec_contains(opts.skip_rules, id) {
+        false
+    } else if len(opts.rules) == 0 {
+        true
+    } else {
+        vec_contains(opts.rules, id) || vec_contains(opts.rules, pack)
+    }
+}
+
+is_inject_class(class) = match class {
+    FileClass.Docs -> true
+    FileClass.Source -> true
+    FileClass.Config -> true
+    FileClass.Other -> true
+    _ -> false
+}
+
+is_llmio_class(class) = match class {
+    FileClass.Source -> true
+    FileClass.Config -> true
+    _ -> false
+}
+
+is_iac_class(class) = match class {
+    FileClass.Docker -> true
+    FileClass.Kubernetes -> true
+    _ -> false
+}
+
+take_enabled(found, opts, pack) -> vec<Finding> = {
+    out := new()
+    i mut:= 0
+    while i < len(found) {
+        f := found[i]
+        if rule_enabled(opts, f.id, pack) {
+            -- Rebuild owned Finding (index emit may yield a shared ref).
+            push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+        }
+        i = i + 1
+    }
+    out
+}
+
+run_detectors(path, text, class, opts) -> vec<Finding> = {
+    acc := take_enabled(scan_agent(path, text), opts, "agent")
+    if is_inject_class(class) {
+        acc = concat_findings(acc, take_enabled(scan_inject(path, text), opts, "inject"))
+    }
+    acc = concat_findings(acc, take_enabled(scan_model(path, text), opts, "model"))
+    if is_llmio_class(class) {
+        acc = concat_findings(acc, take_enabled(scan_llmio(path, text), opts, "llmio"))
+    }
+    if is_iac_class(class) {
+        acc = concat_findings(acc, take_enabled(scan_iac(path, text), opts, "iac"))
+    }
+    acc
+}
+
+scan_path(opts) -> vec<Finding> = {
+    findings := new()
+    files := list_files(opts.path)
+    i mut:= 0
+    while i < len(files) {
+        path := files[i]
+        class := classify(path)
+        text := read_text(path, 10485760)
+        got := run_detectors(path, text, class, opts)
+        findings = concat_findings(findings, got)
+        i = i + 1
+    }
+    findings
+}
+
+has_fmt(outputs, name) = vec_contains(outputs, name)
+
+emit_reports(findings, opts) = {
+    i mut:= 0
+    while i < len(opts.outputs) {
+        fmt := opts.outputs[i]
+        if fmt == "cli" {
+            print_line(render_text(findings))
+        } else if fmt == "json" {
+            body := render_json(findings, "1.0.0")
+            ok := write_file(opts.json_file, body)
+            if !ok {
+                eprint_line("failed to write " ++ opts.json_file)
+            }
+            if !has_fmt(opts.outputs, "cli") {
+                print_line(body)
+            }
+        } else if fmt == "sarif" {
+            body := render_sarif(findings, "1.0.0")
+            ok := write_file(opts.sarif_file, body)
+            if !ok {
+                eprint_line("failed to write " ++ opts.sarif_file)
+            }
+        } else if fmt == "junit" {
+            body := render_junit(findings)
+            ok := write_file(opts.junit_file, body)
+            if !ok {
+                eprint_line("failed to write " ++ opts.junit_file)
+            }
+        }
+        i = i + 1
+    }
+}
+
+pub main() = {
+    argv := cli_args()
+    opts := parse_args(argv)
+    if opts.want_version {
+        print_line("lacan 1.0.0")
+        process_exit(0)
+    }
+    if opts.want_help {
+        print_help()
+        process_exit(0)
+    }
+
+    findings := scan_path(opts)
+    emit_reports(findings, opts)
+
+    failing := count_failing(findings, opts.fail_on)
+    if failing > 0 && !opts.soft_fail {
+        process_exit(1)
+    }
+    process_exit(0)
+}

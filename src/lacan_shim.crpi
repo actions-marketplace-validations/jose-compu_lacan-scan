@@ -1,0 +1,37 @@
+-- Sidecar extern rust decls for lacan_shim (Crisp #116 / #168 json).
+
+extern rust lacan_shim {
+    cli_args() -> vec<str>
+    process_exit(code: int)
+    tool_version() -> str
+    discover(root: str, excludes: vec<str>) -> vec<str>
+    read_text(path: str, max_bytes: int) -> str
+    file_len(path: str) -> int
+    path_basename(path: str) -> str
+    path_extension(path: str) -> str
+    str_contains(hay: str, needle: str) -> bool
+    str_starts_with(s: str, prefix: str) -> bool
+    str_ends_with(s: str, suffix: str) -> bool
+    str_eq_ignore_case(a: str, b: str) -> bool
+    str_to_lower(s: str) -> str
+    re_is_match(pattern: str, text: str) -> bool
+    re_find_line(pattern: str, text: str) -> int
+    find_invisible_line(text: str) -> int
+    json_escape(s: str) -> str
+    xml_escape(s: str) -> str
+    write_file(path: str, contents: str) -> bool
+    eprint_line(msg: str)
+    print_line(msg: str)
+    split_csv(s: str) -> vec<str>
+    vec_contains(xs: vec<str>, item: str) -> bool
+    str_vec_push(xs: vec<str>, item: str) -> vec<str>
+    join_lines(xs: vec<str>) -> str
+    json_empty_array() -> json
+    json_push(arr: json, item: json) -> json
+    json_len(v: json) -> int
+    json_pretty(v: json) -> str
+    json_string(s: str) -> json
+    json_set(obj: json, key: str, val: json) -> json
+    render_junit_report(ids: vec<str>, severities: vec<str>, files: vec<str>, messages: vec<str>) -> str
+    render_text_report(ids: vec<str>, severities: vec<str>, aisbs: vec<str>, atlases: vec<str>, files: vec<str>, lines: vec<int>, messages: vec<str>) -> str
+}

@@ -1,0 +1,70 @@
+-- AISB 7.2 / 1.5 IaC detectors (Dockerfile, Kubernetes subset).
+
+use finding { Finding, Severity, make_finding, has_skip, concat_findings }
+use lacan_shim { re_find_line, str_contains }
+
+pub ais501(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS501") {
+        out
+    } else {
+        line := re_find_line("(?im)^\\s*ENV\\s+LD_PRELOAD(\\s|=)", text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS501",
+                Severity.Critical,
+                "7.2",
+                "AML.T0010.000",
+                path,
+                line,
+                "Dockerfile sets ENV LD_PRELOAD (CVE-2025-23266 class)"
+            ))
+        }
+        out
+    }
+}
+
+pub ais502(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS502") {
+        out
+    } else {
+        has_gpu := str_contains(text, "nvidia.com/gpu")
+        if has_gpu {
+            line_ld := re_find_line("(?i)LD_PRELOAD", text)
+            if line_ld > 0 {
+                push(out, make_finding(
+                    "AIS502",
+                    Severity.High,
+                    "7.2",
+                    "AML.T0010.000",
+                    path,
+                    line_ld,
+                    "GPU workload sets LD_PRELOAD"
+                ))
+            }
+            line_priv := re_find_line("(?i)privileged\\s*:\\s*true", text)
+            if line_priv > 0 {
+                push(out, make_finding(
+                    "AIS502",
+                    Severity.High,
+                    "7.2",
+                    "AML.T0010.000",
+                    path,
+                    line_priv,
+                    "GPU workload runs privileged: true"
+                ))
+            }
+        }
+        out
+    }
+}
+
+pub scan_iac(path, text) -> vec<Finding> = {
+    concat_findings(ais501(path, text), ais502(path, text))
+}
+
+test "ais501 catches ENV LD_PRELOAD" = {
+    fs := ais501("Dockerfile", "FROM nvidia/cuda\nENV LD_PRELOAD=/evil.so\n")
+    assert_eq(len(fs) > 0, true)
+}

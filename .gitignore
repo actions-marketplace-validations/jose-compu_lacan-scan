@@ -1,0 +1,11 @@
+/target/
+**/*.rs.bk
+.DS_Store
+lacan.sarif
+lacan.json
+lacan.junit.xml
+lacan-action.json
+
+# Local planning only — not published to GitHub
+PLAN.md
+*.local.md

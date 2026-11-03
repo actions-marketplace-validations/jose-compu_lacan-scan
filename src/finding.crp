@@ -1,0 +1,110 @@
+-- Finding record, severity, skip comments, fail-on gate.
+
+use lacan_shim { str_contains, str_eq_ignore_case }
+
+pub type Severity = | Low | Medium | High | Critical
+
+pub type Finding = {
+    id: str
+    severity: Severity
+    aisb: str
+    atlas: str
+    file: str
+    line: int
+    message: str
+}
+
+pub severity_name(s) = match s {
+    Severity.Low -> "LOW"
+    Severity.Medium -> "MEDIUM"
+    Severity.High -> "HIGH"
+    Severity.Critical -> "CRITICAL"
+}
+
+pub severity_rank(s) = match s {
+    Severity.Low -> 1
+    Severity.Medium -> 2
+    Severity.High -> 3
+    Severity.Critical -> 4
+}
+
+pub parse_severity(name) = {
+    if str_eq_ignore_case(name, "LOW") {
+        Severity.Low
+    } else if str_eq_ignore_case(name, "MEDIUM") {
+        Severity.Medium
+    } else if str_eq_ignore_case(name, "HIGH") {
+        Severity.High
+    } else if str_eq_ignore_case(name, "CRITICAL") {
+        Severity.Critical
+    } else {
+        Severity.High
+    }
+}
+
+pub make_finding(id, severity, aisb, atlas, file, line, message) = {
+    sev := match severity {
+        Severity.Low -> Severity.Low
+        Severity.Medium -> Severity.Medium
+        Severity.High -> Severity.High
+        Severity.Critical -> Severity.Critical
+    }
+    Finding {
+        id: "{id}"
+        severity: sev
+        aisb: "{aisb}"
+        atlas: "{atlas}"
+        file: "{file}"
+        line: line
+        message: "{message}"
+    }
+}
+
+pub has_skip(text, rule_id) = {
+    needle := "lacan:skip=" ++ rule_id
+    str_contains(text, needle)
+}
+
+pub meets_fail_on(finding, fail_on) = {
+    severity_rank(finding.severity) >= severity_rank(fail_on)
+}
+
+pub count_failing(findings, fail_on) = {
+    n mut:= 0
+    i mut:= 0
+    while i < len(findings) {
+        f := findings[i]
+        if meets_fail_on(f, fail_on) {
+            n = n + 1
+        }
+        i = i + 1
+    }
+    n
+}
+
+-- Concatenate two finding vectors (no &mut param — Crisp emits shared refs for args).
+pub concat_findings(a, b) -> vec<Finding> = {
+    out := new()
+    i mut:= 0
+    while i < len(a) {
+        f := a[i]
+        push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+        i = i + 1
+    }
+    j mut:= 0
+    while j < len(b) {
+        f := b[j]
+        push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+        j = j + 1
+    }
+    out
+}
+
+test "severity rank order" = {
+    assert_eq(severity_rank(Severity.Low) < severity_rank(Severity.Critical), true)
+}
+
+test "skip comment detects rule id" = {
+    assert_eq(has_skip("# lacan:skip=AIS008:lab fixture\ncurl | sh\n", "AIS008"), true)
+    assert_eq(has_skip("curl | sh\n", "AIS008"), false)
+}

@@ -1,0 +1,12 @@
+[package]
+name = "lacan"
+version = "1.0.0"
+edition = "2026"
+
+[build]
+target = "rust"
+error_model = "ambient"
+
+[dependencies]
+lacan_shim = { rust = true, path = "crates/lacan_shim" }
+serde_json = { rust = true, version = "1" }

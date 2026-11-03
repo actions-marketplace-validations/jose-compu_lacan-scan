@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: Install Crisp
+        run: cargo install crisp-lang --locked --version 1.11.0
+      - name: crisp check
+        run: crisp check .
+      - name: crisp test
+        run: crisp test .
+      - name: crisp build
+        run: crisp build .
+      - name: smoke scan fixtures
+        run: |
+          set -euo pipefail
+          bin=target/rust/target/debug/lacan
+          "$bin" scan fixtures/AIS008/fail --fail-on HIGH --output cli; test $? -eq 1 || true
+          "$bin" scan fixtures/AIS501/pass --fail-on HIGH --output cli --soft-fail
