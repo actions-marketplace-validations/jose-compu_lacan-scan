@@ -57,12 +57,17 @@ jobs:
         run: |
           set -euo pipefail
           echo "== crisp test =="
-          crisp test . | tee /tmp/crisp-test.out
+          # Crisp prints the summary on stderr; tee both streams.
+          set +e
+          crisp test . 2>&1 | tee /tmp/crisp-test.out
+          rc=${PIPESTATUS[0]}
+          set -e
           if grep -q 'test result: FAILED' /tmp/crisp-test.out; then
             echo "crisp/cargo tests reported FAILED" >&2
             exit 1
           fi
           grep -E 'crisp test: ok' /tmp/crisp-test.out
+          exit "$rc"
 
       - name: lacan_shim cargo test
         run: |
