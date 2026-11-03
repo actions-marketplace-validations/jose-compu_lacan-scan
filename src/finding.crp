@@ -7,7 +7,7 @@ pub type Severity = | Low | Medium | High | Critical
 pub type Finding = {
     id: str
     severity: Severity
-    aisb: str
+    topic: str
     atlas: str
     file: str
     line: int
@@ -42,7 +42,7 @@ pub parse_severity(name) = {
     }
 }
 
-pub make_finding(id, severity, aisb, atlas, file, line, message) = {
+pub make_finding(id, severity, topic, atlas, file, line, message) = {
     sev := match severity {
         Severity.Low -> Severity.Low
         Severity.Medium -> Severity.Medium
@@ -52,7 +52,7 @@ pub make_finding(id, severity, aisb, atlas, file, line, message) = {
     Finding {
         id: "{id}"
         severity: sev
-        aisb: "{aisb}"
+        topic: "{topic}"
         atlas: "{atlas}"
         file: "{file}"
         line: line
@@ -88,23 +88,67 @@ pub concat_findings(a, b) -> vec<Finding> = {
     i mut:= 0
     while i < len(a) {
         f := a[i]
-        push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+        push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
         i = i + 1
     }
     j mut:= 0
     while j < len(b) {
         f := b[j]
-        push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+        push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
         j = j + 1
     }
     out
 }
 
+pub singleton_finding(f) -> vec<Finding> = {
+    out := new()
+    push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
+    out
+}
+
 test "severity rank order" = {
     assert_eq(severity_rank(Severity.Low) < severity_rank(Severity.Critical), true)
+    assert_eq(severity_rank(Severity.Medium) < severity_rank(Severity.High), true)
+}
+
+test "severity_name labels" = {
+    assert_eq(severity_name(Severity.Low), "LOW")
+    assert_eq(severity_name(Severity.Critical), "CRITICAL")
+}
+
+test "parse_severity case insensitive" = {
+    assert_eq(severity_name(parse_severity("high")), "HIGH")
+    assert_eq(severity_name(parse_severity("MEDIUM")), "MEDIUM")
+    assert_eq(severity_name(parse_severity("nope")), "HIGH")
 }
 
 test "skip comment detects rule id" = {
     assert_eq(has_skip("# lacan:skip=AIS008:lab fixture\ncurl | sh\n", "AIS008"), true)
     assert_eq(has_skip("curl | sh\n", "AIS008"), false)
+    assert_eq(has_skip("# lacan:skip=AIS008:x\n", "AIS001"), false)
+}
+
+test "meets_fail_on gate" = {
+    f := make_finding("AIS008", Severity.High, "2.1", "AML.T0010.000", "x.sh", 1, "hit")
+    assert_eq(meets_fail_on(f, Severity.High), true)
+    assert_eq(meets_fail_on(f, Severity.Critical), false)
+    assert_eq(meets_fail_on(f, Severity.Low), true)
+}
+
+test "count_failing filters by threshold" = {
+    lo := make_finding("A", Severity.Low, "t", "x", "a.py", 1, "low")
+    hi := make_finding("B", Severity.High, "t", "x", "b.py", 2, "high")
+    xs := concat_findings(singleton_finding(lo), singleton_finding(hi))
+    assert_eq(len(xs), 2)
+    assert_eq(count_failing(xs, Severity.High), 1)
+    assert_eq(count_failing(xs, Severity.Low), 2)
+}
+
+test "concat_findings preserves both sides" = {
+    a := make_finding("A", Severity.Low, "t", "x", "a.py", 1, "a")
+    b := make_finding("B", Severity.High, "t", "x", "b.py", 2, "b")
+    c := concat_findings(singleton_finding(a), singleton_finding(b))
+    assert_eq(len(c), 2)
+    assert_eq(c[0].id, "A")
+    assert_eq(c[1].id, "B")
 }

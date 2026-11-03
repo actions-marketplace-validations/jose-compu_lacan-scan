@@ -1,6 +1,9 @@
 -- Lacan Scan CLI: `lacan scan [path] [flags]`
 
-use finding { Finding, Severity, parse_severity, count_failing, concat_findings, make_finding }
+use finding {
+    Finding, Severity, parse_severity, count_failing, concat_findings, make_finding,
+    severity_name, severity_rank
+}
 use walk { list_files, classify, FileClass }
 use detect.agent { scan_agent }
 use detect.inject { scan_inject }
@@ -10,7 +13,7 @@ use detect.iac { scan_iac }
 use report.render { render_text, render_json, render_sarif, render_junit }
 use lacan_shim {
     cli_args, process_exit, read_text, print_line, eprint_line,
-    write_file, split_csv, vec_contains, str_starts_with
+    write_file, split_csv, vec_contains, str_starts_with, str_vec_push, str_contains
 }
 
 type ScanOpts = {
@@ -36,7 +39,7 @@ default_outputs() -> vec<str> = {
 empty_strs() -> vec<str> = new()
 
 print_help() = {
-    print_line("lacan — AI safety static scanner (AISB-backed)")
+    print_line("lacan — AI safety static scanner")
     print_line("")
     print_line("Usage:")
     print_line("  lacan scan [path] [options]")
@@ -177,7 +180,7 @@ take_enabled(found, opts, pack) -> vec<Finding> = {
         f := found[i]
         if rule_enabled(opts, f.id, pack) {
             -- Rebuild owned Finding (index emit may yield a shared ref).
-            push(out, make_finding(f.id, f.severity, f.aisb, f.atlas, f.file, f.line, f.message))
+            push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
         }
         i = i + 1
     }
@@ -268,4 +271,165 @@ pub main() = {
         process_exit(1)
     }
     process_exit(0)
+}
+
+-- --- unit / e2e helpers (tests) ---
+
+argv1(a) = str_vec_push(new(), a)
+
+argv2(a, b) = str_vec_push(argv1(a), b)
+
+argv4(a, b, c, d) = str_vec_push(str_vec_push(argv2(a, b), c), d)
+
+argv6(a, b, c, d, e, f) = str_vec_push(str_vec_push(argv4(a, b, c, d), e), f)
+
+default_scan_opts(path) = {
+    ScanOpts {
+        path: "{path}"
+        fail_on: Severity.High
+        outputs: default_outputs()
+        sarif_file: "lacan.sarif"
+        json_file: "lacan.json"
+        junit_file: "lacan.junit.xml"
+        rules: empty_strs()
+        skip_rules: empty_strs()
+        soft_fail: false
+        want_help: false
+        want_version: false
+    }
+}
+
+finding_ids_contain(findings, id) = {
+    hit mut:= false
+    i mut:= 0
+    while i < len(findings) {
+        if findings[i].id == id {
+            hit = true
+        }
+        i = i + 1
+    }
+    hit
+}
+
+test "parse_args defaults" = {
+    opts := parse_args(argv1("scan"))
+    assert_eq(opts.path, ".")
+    assert_eq(severity_name(opts.fail_on), "HIGH")
+    assert_eq(opts.soft_fail, false)
+    assert_eq(has_fmt(opts.outputs, "cli"), true)
+}
+
+test "parse_args path and fail-on" = {
+    opts := parse_args(argv4("scan", "fixtures/AIS008/fail", "--fail-on", "LOW"))
+    assert_eq(opts.path, "fixtures/AIS008/fail")
+    assert_eq(severity_name(opts.fail_on), "LOW")
+}
+
+test "parse_args soft-fail and version" = {
+    opts := parse_args(argv2("scan", "--soft-fail"))
+    assert_eq(opts.soft_fail, true)
+    ver := parse_args(argv1("--version"))
+    assert_eq(ver.want_version, true)
+}
+
+test "parse_args output list" = {
+    opts := parse_args(argv4("scan", ".", "--output", "json,sarif"))
+    assert_eq(has_fmt(opts.outputs, "json"), true)
+    assert_eq(has_fmt(opts.outputs, "sarif"), true)
+    assert_eq(has_fmt(opts.outputs, "cli"), false)
+}
+
+test "rule_enabled default allows all" = {
+    opts := default_scan_opts(".")
+    assert_eq(rule_enabled(opts, "AIS008", "agent"), true)
+}
+
+test "rule_enabled skip-rules" = {
+    opts := parse_args(argv4("scan", ".", "--skip-rules", "AIS008"))
+    assert_eq(rule_enabled(opts, "AIS008", "agent"), false)
+    assert_eq(rule_enabled(opts, "AIS001", "agent"), true)
+}
+
+test "rule_enabled pack filter" = {
+    opts := parse_args(argv4("scan", ".", "--rules", "iac"))
+    assert_eq(rule_enabled(opts, "AIS501", "iac"), true)
+    assert_eq(rule_enabled(opts, "AIS008", "agent"), false)
+}
+
+test "class gates" = {
+    assert_eq(is_iac_class(FileClass.Docker), true)
+    assert_eq(is_iac_class(FileClass.Source), false)
+    assert_eq(is_llmio_class(FileClass.Source), true)
+    assert_eq(is_inject_class(FileClass.Docs), true)
+}
+
+-- cargo test cwd is target/rust/; fixtures live at repo root.
+fixture(path) = "../../" ++ path
+
+test "e2e scan AIS008 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
+    findings := scan_path(opts)
+    assert_eq(len(findings) > 0, true)
+    assert_eq(finding_ids_contain(findings, "AIS008"), true)
+    assert_eq(count_failing(findings, Severity.High) > 0, true)
+}
+
+test "e2e scan AIS008 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS008/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS501 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS501/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS501"), true)
+    assert_eq(severity_rank(findings[0].severity), severity_rank(Severity.Critical))
+}
+
+test "e2e scan AIS501 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS501/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS001 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS001/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS001"), true)
+}
+
+test "e2e scan AIS102 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS102/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS102"), true)
+}
+
+test "e2e scan AIS101 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS101/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS101"), true)
+}
+
+test "e2e pack filter skips agent on dockerfile" = {
+    opts := parse_args(argv6("scan", fixture("fixtures/AIS501/fail"), "--rules", "agent", "--fail-on", "LOW"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS501"), false)
+}
+
+body_has(hay, needle) = str_contains(hay, needle)
+
+test "e2e json report mentions rule" = {
+    opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
+    findings := scan_path(opts)
+    body := render_json(findings, "1.0.0")
+    assert_eq(body_has(body, "AIS008"), true)
+}
+
+test "e2e sarif report mentions rule" = {
+    opts := default_scan_opts(fixture("fixtures/AIS008/fail"))
+    findings := scan_path(opts)
+    body := render_sarif(findings, "1.0.0")
+    assert_eq(body_has(body, "AIS008"), true)
+    assert_eq(body_has(body, "$schema"), true)
 }

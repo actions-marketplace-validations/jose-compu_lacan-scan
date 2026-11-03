@@ -1,4 +1,4 @@
--- AISB 1.5 / 4.x model / weight detectors (v1 subset).
+-- Model / weight detectors (v1 subset).
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim { re_find_line, path_extension, str_to_lower, file_len }
@@ -72,4 +72,39 @@ pub scan_model(path, text) -> vec<Finding> = {
 test "ais203 trust_remote_code" = {
     fs := ais203("load.py", "model = AutoModel.from_pretrained('x', trust_remote_code=True)\n")
     assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS203")
+}
+
+test "ais203 unpinned from_pretrained" = {
+    fs := ais203("load.py", "model = AutoModel.from_pretrained('org/name')\n")
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais203 pinned revision clean" = {
+    fs := ais203(
+        "load.py",
+        "model = AutoModel.from_pretrained('org/name', revision='abc123')\n"
+    )
+    assert_eq(len(fs), 0)
+}
+
+test "ais203 respects skip" = {
+    fs := ais203(
+        "load.py",
+        "# lacan:skip=AIS203:demo\nmodel = AutoModel.from_pretrained('x', trust_remote_code=True)\n"
+    )
+    assert_eq(len(fs), 0)
+}
+
+test "ais202 non-weight ignored" = {
+    fs := ais202("readme.md", "not a weight file\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais202 lfs pointer ignored" = {
+    fs := ais202(
+        "weights/model.safetensors",
+        "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 99999999\n"
+    )
+    assert_eq(len(fs), 0)
 }

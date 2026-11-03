@@ -309,7 +309,7 @@ pub fn render_junit_report(
 pub fn render_text_report(
     ids: &[String],
     severities: &[String],
-    aisbs: &[String],
+    topics: &[String],
     atlases: &[String],
     files: &[String],
     lines: &[i64],
@@ -335,10 +335,60 @@ pub fn render_text_report(
             severities.get(i).cloned().unwrap_or_default()
         ));
         out.push_str(&format!(
-            "\tAISB: {}  ATLAS: {}\n",
-            aisbs.get(i).cloned().unwrap_or_default(),
+            "\tTopic: {}  ATLAS: {}\n",
+            topics.get(i).cloned().unwrap_or_default(),
             atlases.get(i).cloned().unwrap_or_default()
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn re_find_line_reports_one_based_line() {
+        let text = "alpha\nbeta evil\ngamma\n";
+        assert_eq!(re_find_line("evil", text), 2);
+        assert_eq!(re_find_line("missing", text), 0);
+    }
+
+    #[test]
+    fn discover_lists_fixture_files() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/AIS008");
+        let excludes = vec!["node_modules".to_string(), "target".to_string()];
+        let files = discover(root, &excludes);
+        assert!(
+            files.iter().any(|p| p.ends_with("fail/setup.sh")),
+            "files={files:?}"
+        );
+        assert!(
+            files.iter().any(|p| p.ends_with("pass/setup.sh")),
+            "files={files:?}"
+        );
+    }
+
+
+    #[test]
+    fn find_invisible_line_detects_zwsp() {
+        let text = "hello\u{200b}world\n";
+        assert_eq!(find_invisible_line(text), 1);
+        assert_eq!(find_invisible_line("hello world\n"), 0);
+    }
+
+    #[test]
+    fn render_text_report_includes_check() {
+        let body = render_text_report(
+            &["AIS008".into()],
+            &["HIGH".into()],
+            &["2.1".into()],
+            &["AML.T0010.000".into()],
+            &["x.sh".into()],
+            &[3],
+            &["hit".into()],
+        );
+        assert!(body.contains("AIS008"));
+        assert!(body.contains("Topic: 2.1"));
+    }
 }

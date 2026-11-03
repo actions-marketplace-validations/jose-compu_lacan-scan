@@ -8,23 +8,81 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  crisp:
+    name: crisp (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@1.85.0
-      - name: Install Crisp
-        run: cargo install crisp-lang --locked --version 1.11.0
-      - name: crisp check
-        run: crisp check .
-      - name: crisp test
-        run: crisp test .
-      - name: crisp build
-        run: crisp build .
-      - name: smoke scan fixtures
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-crisp-1.11.0-${{ hashFiles('**/Cargo.toml', 'crisp.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-crisp-1.11.0-
+
+      - name: Install Crisp 1.11.0
         run: |
           set -euo pipefail
-          bin=target/rust/target/debug/lacan
-          "$bin" scan fixtures/AIS008/fail --fail-on HIGH --output cli; test $? -eq 1 || true
-          "$bin" scan fixtures/AIS501/pass --fail-on HIGH --output cli --soft-fail
+          if ! command -v crisp >/dev/null 2>&1 || ! crisp --version | grep -q '1\.11\.0'; then
+            cargo install crisp-lang --locked --version 1.11.0 --force
+          fi
+          crisp --version
+
+      - name: crisp check
+        run: |
+          set -euo pipefail
+          echo "== crisp check =="
+          crisp check .
+
+      - name: crisp test
+        run: |
+          set -euo pipefail
+          echo "== crisp test =="
+          crisp test . | tee /tmp/crisp-test.out
+          if grep -q 'test result: FAILED' /tmp/crisp-test.out; then
+            echo "crisp/cargo tests reported FAILED" >&2
+            exit 1
+          fi
+          grep -E 'crisp test: ok' /tmp/crisp-test.out
+
+      - name: lacan_shim cargo test
+        run: |
+          set -euo pipefail
+          echo "== cargo test -p lacan_shim =="
+          cargo test --manifest-path crates/lacan_shim/Cargo.toml -- --nocapture
+
+      - name: crisp build
+        run: |
+          set -euo pipefail
+          echo "== crisp build =="
+          crisp build . 2>&1 | tee /tmp/crisp-build.out
+          # Crisp codegen noise is silenced in .cargo/config.toml; keep builds clean.
+          warn_count="$(grep -c '^warning:' /tmp/crisp-build.out || true)"
+          echo "rustc warning lines: ${warn_count}"
+          test "$warn_count" -eq 0
+          test -x target/rust/target/debug/lacan
+          ./target/rust/target/debug/lacan --version | grep -F 'lacan 1.0.0'
+
+      - name: e2e
+        run: |
+          set -euo pipefail
+          chmod +x scripts/e2e.sh
+          ./scripts/e2e.sh

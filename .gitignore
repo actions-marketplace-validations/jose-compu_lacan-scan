@@ -1,4 +1,5 @@
 /target/
+**/target/
 **/*.rs.bk
 .DS_Store
 lacan.sarif
@@ -9,3 +10,7 @@ lacan-action.json
 # Local planning only — not published to GitHub
 PLAN.md
 *.local.md
+
+# brand crop scratch
+assets/_crop_preview/
+assets/_grid/

@@ -43,6 +43,8 @@ jobs:
           set -euo pipefail
           crisp emit .
           cargo build --release --manifest-path target/rust/Cargo.toml --target ${{ matrix.target }}
+          test -x "target/rust/target/${{ matrix.target }}/release/lacan"
+          "target/rust/target/${{ matrix.target }}/release/lacan" --version
       - name: Package
         shell: bash
         run: |
@@ -54,6 +56,8 @@ jobs:
           else
             shasum -a 256 "$archive" > "$archive.sha256"
           fi
+          echo "=== ${archive} ==="
+          cat "$archive.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -72,10 +76,28 @@ jobs:
         with:
           merge-multiple: true
           path: dist
+      - name: Show release assets
+        run: ls -la dist && cat dist/*.sha256
       - uses: softprops/action-gh-release@v2
         with:
+          name: Lacan Scan ${{ github.ref_name }}
           files: dist/*
           generate_release_notes: true
+          body: |
+            AI-safety static scanner for Git repositories.
+
+            ## GitHub Action
+            ```yaml
+            - uses: jose-compu/lacan-scan@v1
+              with:
+                path: .
+                fail-on: HIGH
+                output: sarif
+                sarif-file: lacan.sarif
+                version: "1"
+            ```
+
+            Floating major tag `v1` tracks this release line. Pin `version: "1.0.0"` for a fixed binary.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:
@@ -88,7 +110,7 @@ jobs:
             exit 0
           fi
           major="v${BASH_REMATCH[1]}"
-          git fetch origin "$tag"
+          git fetch origin "refs/tags/${tag}:refs/tags/${tag}"
           git tag -f "$major" "$tag"
           git push -f origin "refs/tags/${major}"
           echo "pointed ${major} -> ${tag}"

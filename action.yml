@@ -1,9 +1,9 @@
 name: Lacan Scan
-description: AI safety static scanner (AISB-backed) with SARIF output for GitHub code scanning
+description: AI safety static scanner with SARIF output for GitHub code scanning
 author: jose-compu
 branding:
   icon: shield
-  color: gray-dark
+  color: green
 
 inputs:
   path:
@@ -96,11 +96,7 @@ runs:
           major="$version"
           api="https://api.github.com/repos/jose-compu/lacan-scan/releases?per_page=100"
           tag="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
-            | python3 -c "import json,sys,re
-rels=json.load(sys.stdin)
-pat=re.compile(r'^v${major}\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?\$')
-cands=[r['tag_name'] for r in rels if not r.get('draft') and not r.get('prerelease') and pat.match(r.get('tag_name') or '')]
-print(cands[0] if cands else '')")"
+            | MAJOR="$major" python3 -c 'import json,sys,re,os; rels=json.load(sys.stdin); major=os.environ["MAJOR"]; pat=re.compile(r"^v"+re.escape(major)+r"\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$"); cands=[r["tag_name"] for r in rels if not r.get("draft") and not r.get("prerelease") and pat.match(r.get("tag_name") or "")]; print(cands[0] if cands else "")')"
         elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
           tag="v${version}"
         else

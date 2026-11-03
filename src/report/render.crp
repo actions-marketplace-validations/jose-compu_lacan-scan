@@ -1,16 +1,18 @@
 -- Reports: JSON/SARIF via Crisp 1.11 json literals; text/junit via shim.
 
-use finding { severity_name }
+use finding { Severity, make_finding, severity_name, singleton_finding }
 use lacan_shim {
     render_text_report, render_junit_report,
     json_empty_array, json_push, json_len, json_pretty, json_string, json_set,
-    vec_contains, str_vec_push
+    vec_contains, str_vec_push, str_contains
 }
+
+report_mentions(hay, needle) = str_contains(hay, needle)
 
 type Columns = {
     ids: vec<str>
     severities: vec<str>
-    aisbs: vec<str>
+    topics: vec<str>
     atlases: vec<str>
     files: vec<str>
     lines: vec<int>
@@ -20,7 +22,7 @@ type Columns = {
 flatten(findings) = {
     ids := new()
     severities := new()
-    aisbs := new()
+    topics := new()
     atlases := new()
     files := new()
     lines := new()
@@ -30,7 +32,7 @@ flatten(findings) = {
         f := findings[i]
         push(ids, f.id)
         push(severities, severity_name(f.severity))
-        push(aisbs, f.aisb)
+        push(topics, f.topic)
         push(atlases, f.atlas)
         push(files, f.file)
         push(lines, f.line)
@@ -40,7 +42,7 @@ flatten(findings) = {
     Columns {
         ids: ids
         severities: severities
-        aisbs: aisbs
+        topics: topics
         atlases: atlases
         files: files
         lines: lines
@@ -50,7 +52,7 @@ flatten(findings) = {
 
 pub render_text(findings) = {
     c := flatten(findings)
-    render_text_report(c.ids, c.severities, c.aisbs, c.atlases, c.files, c.lines, c.messages)
+    render_text_report(c.ids, c.severities, c.topics, c.atlases, c.files, c.lines, c.messages)
 }
 
 pub render_junit(findings) = {
@@ -61,7 +63,7 @@ pub render_junit(findings) = {
 finding_json(f) -> json = {
     check_id: f.id,
     severity: severity_name(f.severity),
-    aisb: f.aisb,
+    topic: f.topic,
     atlas: f.atlas,
     file: f.file,
     start_line: f.line,
@@ -100,8 +102,8 @@ rule_json(f) -> json = {
     shortDescription: { text: f.message },
     fullDescription: { text: f.message },
     defaultConfiguration: { level: sarif_level(severity_name(f.severity)) },
-    helpUri: "https://github.com/jose-compu/aisb/tree/main/" ++ f.aisb,
-    properties: { aisb: f.aisb, atlas: f.atlas },
+    helpUri: "https://github.com/jose-compu/lacan-scan",
+    properties: { topic: f.topic, atlas: f.atlas },
 }
 
 result_json(f) -> json = {
@@ -154,4 +156,60 @@ pub render_sarif(findings, version) = {
     schema := json_string("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json")
     doc = json_set(doc, "$schema", schema)
     json_pretty(doc)
+}
+
+sample_finding() = {
+    make_finding(
+        "AIS008",
+        Severity.High,
+        "2.1",
+        "AML.T0010.000",
+        "scripts/setup.sh",
+        3,
+        "Reverse-shell or pipe-to-shell primitive matched"
+    )
+}
+
+sample_findings() = singleton_finding(sample_finding())
+
+test "sarif_level mapping" = {
+    assert_eq(sarif_level("CRITICAL"), "error")
+    assert_eq(sarif_level("HIGH"), "error")
+    assert_eq(sarif_level("MEDIUM"), "warning")
+    assert_eq(sarif_level("LOW"), "note")
+}
+
+test "render_json includes check id" = {
+    xs := sample_findings()
+    body := render_json(xs, "1.0.0")
+    assert_eq(report_mentions(body, "AIS008"), true)
+    assert_eq(report_mentions(body, "failed"), true)
+}
+
+test "render_sarif includes rule and schema" = {
+    xs := sample_findings()
+    body := render_sarif(xs, "1.0.0")
+    assert_eq(report_mentions(body, "AIS008"), true)
+    assert_eq(report_mentions(body, "$schema"), true)
+    assert_eq(report_mentions(body, "jose-compu/lacan-scan"), true)
+}
+
+test "render_text names the check" = {
+    xs := sample_findings()
+    body := render_text(xs)
+    assert_eq(report_mentions(body, "AIS008"), true)
+    assert_eq(report_mentions(body, "scripts/setup.sh"), true)
+}
+
+test "render_junit emits testcase" = {
+    xs := sample_findings()
+    body := render_junit(xs)
+    assert_eq(report_mentions(body, "<testcase"), true)
+    assert_eq(report_mentions(body, "AIS008"), true)
+}
+
+test "empty findings json summary zero" = {
+    xs := new()
+    body := render_json(xs, "1.0.0")
+    assert_eq(report_mentions(body, "failed"), true)
 }

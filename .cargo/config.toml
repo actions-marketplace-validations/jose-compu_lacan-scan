@@ -1,0 +1,4 @@
+# Crisp 1.11 emit wraps single-expression blocks and marks some locals `mut`
+# unnecessarily. These are toolchain codegen noise, not lacan logic issues.
+[build]
+rustflags = ["-A", "unused_mut", "-A", "unused_braces"]

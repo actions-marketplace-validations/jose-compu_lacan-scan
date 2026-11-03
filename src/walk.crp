@@ -51,6 +51,37 @@ is_dockerfile(lower) = {
     lower == "dockerfile" || lower == "containerfile" || str_starts_with(lower, "dockerfile.") || str_starts_with(lower, "containerfile.") || str_ends_with(lower, ".dockerfile")
 }
 
+class_is_docker(c) = match c {
+    FileClass.Docker -> true
+    _ -> false
+}
+
+class_is_workflow(c) = match c {
+    FileClass.Workflow -> true
+    _ -> false
+}
+
+class_is_gitmeta(c) = match c {
+    FileClass.GitMeta -> true
+    _ -> false
+}
+
+class_is_source(c) = match c {
+    FileClass.Source -> true
+    _ -> false
+}
+
+class_is_docs(c) = match c {
+    FileClass.Docs -> true
+    _ -> false
+}
+
+class_is_data(c) = match c {
+    FileClass.Data -> true
+    _ -> false
+}
+
+
 looks_kubernetes(path, ext) = {
     if !(ext == "yml" || ext == "yaml") {
         false
@@ -62,5 +93,34 @@ looks_kubernetes(path, ext) = {
 test "dockerfile name" = {
     assert_eq(is_dockerfile("dockerfile"), true)
     assert_eq(is_dockerfile("dockerfile.dev"), true)
+    assert_eq(is_dockerfile("containerfile"), true)
+    assert_eq(is_dockerfile("app.dockerfile"), true)
     assert_eq(is_dockerfile("readme"), false)
+}
+
+test "classify docker path" = {
+    assert_eq(class_is_docker(classify("services/api/Dockerfile")), true)
+}
+
+test "classify workflow path" = {
+    assert_eq(class_is_workflow(classify("repo/.github/workflows/ci.yml")), true)
+}
+
+test "classify git hook path" = {
+    assert_eq(class_is_gitmeta(classify("repo/dot-git/hooks/pre-commit")), true)
+}
+
+test "classify source and docs" = {
+    assert_eq(class_is_source(classify("src/main.py")), true)
+    assert_eq(class_is_docs(classify("docs/README.md")), true)
+}
+
+test "classify weight data" = {
+    assert_eq(class_is_data(classify("weights/model.safetensors")), true)
+}
+
+test "default_excludes has node_modules" = {
+    xs := default_excludes()
+    assert_eq(len(xs) > 0, true)
+    assert_eq(xs[0], "node_modules")
 }

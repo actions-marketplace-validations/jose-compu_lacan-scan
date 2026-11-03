@@ -1,4 +1,4 @@
--- AISB 7.2 / 1.5 IaC detectors (Dockerfile, Kubernetes subset).
+-- IaC detectors (Dockerfile, Kubernetes subset).
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim { re_find_line, str_contains }
@@ -67,4 +67,37 @@ pub scan_iac(path, text) -> vec<Finding> = {
 test "ais501 catches ENV LD_PRELOAD" = {
     fs := ais501("Dockerfile", "FROM nvidia/cuda\nENV LD_PRELOAD=/evil.so\n")
     assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS501")
+}
+
+test "ais501 ignores unrelated ENV" = {
+    fs := ais501("Dockerfile", "FROM nvidia/cuda\nENV NVIDIA_VISIBLE_DEVICES=all\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais501 respects skip" = {
+    fs := ais501("Dockerfile", "# lacan:skip=AIS501:lab\nENV LD_PRELOAD=/evil.so\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais502 gpu ld_preload" = {
+    fs := ais502(
+        "k8s/job.yaml",
+        "resources:\n  limits:\n    nvidia.com/gpu: 1\nenv:\n  - name: LD_PRELOAD\n    value: /evil.so\n"
+    )
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS502")
+}
+
+test "ais502 gpu privileged" = {
+    fs := ais502(
+        "manifests/train.yaml",
+        "nvidia.com/gpu: \"1\"\nsecurityContext:\n  privileged: true\n"
+    )
+    assert_eq(len(fs) > 0, true)
+}
+
+test "ais502 ignores non-gpu privileged" = {
+    fs := ais502("manifests/web.yaml", "privileged: true\n")
+    assert_eq(len(fs), 0)
 }
