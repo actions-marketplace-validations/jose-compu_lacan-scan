@@ -8,6 +8,16 @@
   <em>Analyseur de sécurité IA pour dépôts Git</em>
 </p>
 
+<p align="center">
+  <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
+  <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-1.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 1.0.0" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v1-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v1" /></a>
+  <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E4A3F?labelColor=F6EAD7" alt="License Apache-2.0" /></a>
+</p>
+
 Static AI-safety scanner for repository folders (file traces only). Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Ship as CLI `lacan` and GitHub Action `jose-compu/lacan-scan@v1`.
 
 ## Install
