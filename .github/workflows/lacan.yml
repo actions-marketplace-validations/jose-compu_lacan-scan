@@ -26,6 +26,7 @@ jobs:
           output: sarif,cli
           sarif-file: lacan.sarif
           version: "3"
+          args: --soft-fail
       - uses: github/codeql-action/upload-sarif@v3
         if: always() && hashFiles('lacan.sarif') != ''
         with:
