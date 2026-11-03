@@ -91,16 +91,58 @@ runs:
           curl_auth=(-H "Authorization: Bearer ${GH_TOKEN}")
         fi
 
-        # Accept: latest | major (1) | semver (1.0.0). Major resolves to newest vN.* release.
+        # Accept: latest | major (1) | semver (1.0.0). Major → newest vN.*.* with assets, else floating vN.
+        releases_api="https://api.github.com/repos/jose-compu/lacan-scan/releases?per_page=100"
+        releases_json="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$releases_api")"
+
+        resolve_major() {
+          MAJOR="$1" RELEASES_JSON="$2" python3 << 'PY'
+import json, os, re, sys
+
+major = os.environ["MAJOR"]
+rels = json.loads(os.environ["RELEASES_JSON"])
+floating = f"v{major}"
+semver = re.compile(rf"^v{re.escape(major)}\.(\d+)\.(\d+)(?:[.-][A-Za-z0-9.-]+)?$")
+
+def tarball_assets(release):
+    return [
+        a
+        for a in (release.get("assets") or [])
+        if (a.get("name") or "").endswith(".tar.gz")
+        and not (a.get("name") or "").endswith(".sha256")
+    ]
+
+ranked = []
+for rel in rels:
+    if rel.get("draft") or rel.get("prerelease"):
+        continue
+    tag = rel.get("tag_name") or ""
+    if not tarball_assets(rel):
+        continue
+    m = semver.match(tag)
+    if m:
+        ranked.append((int(m.group(1)), int(m.group(2)), tag))
+
+if ranked:
+    ranked.sort(reverse=True)
+    print(ranked[0][2])
+    sys.exit(0)
+
+for rel in rels:
+    if rel.get("draft") or rel.get("prerelease"):
+        continue
+    if (rel.get("tag_name") or "") == floating and tarball_assets(rel):
+        print(floating)
+        sys.exit(0)
+
+sys.exit(0)
+PY
+        }
+
         if [ "$version" = "latest" ]; then
-          api="https://api.github.com/repos/jose-compu/lacan-scan/releases/latest"
-          tag="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
-            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          tag="$(printf '%s' "$releases_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
         elif [[ "$version" =~ ^[0-9]+$ ]]; then
-          major="$version"
-          api="https://api.github.com/repos/jose-compu/lacan-scan/releases?per_page=100"
-          tag="$(curl -fsSL "${curl_auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
-            | MAJOR="$major" python3 -c 'import json,sys,re,os; rels=json.load(sys.stdin); major=os.environ["MAJOR"]; pat=re.compile(r"^v"+re.escape(major)+r"\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$"); cands=[r["tag_name"] for r in rels if not r.get("draft") and not r.get("prerelease") and pat.match(r.get("tag_name") or "")]; print(cands[0] if cands else "")')"
+          tag="$(resolve_major "$version" "$releases_json")"
         elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
           tag="v${version}"
         else
@@ -108,7 +150,7 @@ runs:
           exit 1
         fi
 
-        if [ -z "$tag" ] || ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
+        if [ -z "$tag" ] || ! [[ "$tag" =~ ^v[0-9]+(\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?)?$ ]]; then
           echo "failed to resolve a valid release tag from version=${INPUT_VERSION}" >&2
           exit 1
         fi
