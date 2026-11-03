@@ -163,36 +163,39 @@ runs:
         changed_base="${INPUT_CHANGED_BASE}"
         args="${INPUT_ARGS}"
 
-        safe_path='^[A-Za-z0-9._/=@+-][A-Za-z0-9._/=@+ -]*$'
-        if [ -z "$path" ] || ! [[ "$path" =~ $safe_path ]]; then
+        _matches() {
+          printf '%s\n' "$1" | grep -Eq "$2"
+        }
+
+        if [ -z "$path" ] || ! _matches "$path" '^[-A-Za-z0-9._/=@+][-A-Za-z0-9._/ @+]*$'; then
           echo "invalid path input" >&2
           exit 1
         fi
-        if ! [[ "$fail_on" =~ ^(LOW|MEDIUM|HIGH|CRITICAL)$ ]]; then
+        if ! _matches "$fail_on" '^(LOW|MEDIUM|HIGH|CRITICAL)$'; then
           echo "invalid fail-on input (expected LOW|MEDIUM|HIGH|CRITICAL)" >&2
           exit 1
         fi
-        if ! [[ "$output" =~ ^(cli|json|sarif|junit)(,(cli|json|sarif|junit))*$ ]]; then
+        if ! _matches "$output" '^(cli|json|sarif|junit)(,(cli|json|sarif|junit))*$'; then
           echo "invalid output input (expected comma-separated cli,json,sarif,junit)" >&2
           exit 1
         fi
-        if ! [[ "$sarif_file" =~ ^[A-Za-z0-9._/=@+-][A-Za-z0-9._/=@+ -]*$ ]]; then
+        if ! _matches "$sarif_file" '^[-A-Za-z0-9._/=@+][-A-Za-z0-9._/ @+]*$'; then
           echo "invalid sarif-file input" >&2
           exit 1
         fi
-        if [ -n "$rules" ] && ! [[ "$rules" =~ ^[A-Za-z0-9_,.-]+$ ]]; then
+        if [ -n "$rules" ] && ! _matches "$rules" '^[A-Za-z0-9_,.-]+$'; then
           echo "invalid rules input" >&2
           exit 1
         fi
-        if [ -n "$skip_rules" ] && ! [[ "$skip_rules" =~ ^[A-Za-z0-9_,.-]+$ ]]; then
+        if [ -n "$skip_rules" ] && ! _matches "$skip_rules" '^[A-Za-z0-9_,.-]+$'; then
           echo "invalid skip-rules input" >&2
           exit 1
         fi
-        if [ -n "$changed_base" ] && ! [[ "$changed_base" =~ ^[A-Za-z0-9._/~^:-]+$ ]]; then
+        if [ -n "$changed_base" ] && ! _matches "$changed_base" '^[-A-Za-z0-9._~^:/+=]+$'; then
           echo "invalid changed-base input" >&2
           exit 1
         fi
-        if [ -n "$args" ] && ! [[ "$args" =~ ^[A-Za-z0-9_./=,:@+ -]+$ ]]; then
+        if [ -n "$args" ] && ! _matches "$args" '^[-A-Za-z0-9_./=,:@+ ]+$'; then
           echo "invalid args input (forbidden characters)" >&2
           exit 1
         fi

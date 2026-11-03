@@ -1,7 +1,7 @@
 # Lacan Scan
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-readme.png" alt="Lacan Scan" width="360" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.6/assets/brand/logo-readme.png" alt="Lacan Scan" width="360" />
 </p>
 
 <p align="center">
@@ -70,7 +70,7 @@ Optional pre-commit hook: `scripts/pre-commit-lacan.sh` (requires `lacan` on `PA
 Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lacan-scan) or reference `action.yml` directly.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.6/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
 </p>
 
 ```yaml
@@ -95,7 +95,7 @@ Pin floating major `@v3` (tracks `v3.*`). Pin binary `version: "3.0.5"` for a fi
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.5/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.6/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
 </p>
 
 ## Detectors
@@ -145,7 +145,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v2** | AIS105, AIS204, AIS401, AIS504 |
 | **v3** | Changed-only PR scans, pre-commit helper, Action `@v3` |
 
-Tag `v3.0.5` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
+Tag `v3.0.6` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones).
 
