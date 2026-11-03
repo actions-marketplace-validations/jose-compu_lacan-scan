@@ -129,7 +129,7 @@ jobs:
             exit 0
           fi
           major="v${BASH_REMATCH[1]}"
-          git fetch origin "refs/tags/${tag}:refs/tags/${tag}"
-          git tag -f "$major" "$tag"
+          commit="$(git rev-parse "${GITHUB_REF}^{commit}")"
+          git tag -f "$major" "$commit"
           git push -f origin "refs/tags/${major}"
-          echo "pointed ${major} -> ${tag}"
+          echo "pointed ${major} -> ${tag} (${commit})"
