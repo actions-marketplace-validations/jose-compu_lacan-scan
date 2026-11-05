@@ -19,9 +19,62 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E4A3F?labelColor=F6EAD7" alt="License Apache-2.0" /></a>
 </p>
 
-Static AI-safety scanner for repository folders (file traces only). Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Ship as CLI `lacan` and GitHub Action `jose-compu/lacan-scan@v3` (earlier majors: `@v1`, `@v2`).
+Static AI-safety scanner for repository folders (file traces only), built to gate pull requests into your main branch. The main way to run it is the GitHub Action `jose-compu/lacan-scan@v3` (earlier majors: `@v1`, `@v2`). The `lacan` CLI reproduces CI findings locally. Written in [Crisp](https://crisp-lang.org/) with a small Rust shim.
 
-## Install
+## GitHub Action
+
+Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lacan-scan) or reference `action.yml` directly.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
+</p>
+
+Recommended workflow: scan changed files on pull requests, and the whole repository on pushes to `main`.
+
+```yaml
+name: lacan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: jose-compu/lacan-scan@v3
+        with:
+          path: .
+          fail-on: HIGH
+          output: sarif,cli
+          sarif-file: lacan.sarif
+          version: "3"
+          changed-only: ${{ github.event_name == 'pull_request' }}
+          changed-base: ${{ github.event.pull_request.base.sha }}
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('lacan.sarif') != ''
+        with:
+          sarif_file: lacan.sarif
+          category: lacan
+```
+
+Pin floating major `@v3` (tracks `v3.*`). Pin binary `version: "3.0.5"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves.
+
+**Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
+</p>
+
+## Install the CLI
 
 **Release binary:** download `lacan-<triple>.tar.gz` from [Releases](https://github.com/jose-compu/lacan-scan/releases), verify the `.sha256`, extract, and put `lacan` on your `PATH`.
 
@@ -64,39 +117,6 @@ Examples:
 ```
 
 Optional pre-commit hook: `scripts/pre-commit-lacan.sh` (requires `lacan` on `PATH`).
-
-## GitHub Action
-
-Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lacan-scan) or reference `action.yml` directly.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
-</p>
-
-```yaml
-- uses: jose-compu/lacan-scan@v3
-  with:
-    path: .
-    fail-on: HIGH
-    output: sarif
-    sarif-file: lacan.sarif
-    version: "3"
-    changed-only: "true"
-    changed-base: ${{ github.event.pull_request.base.sha }}
-- uses: github/codeql-action/upload-sarif@v3
-  if: always()
-  with:
-    sarif_file: lacan.sarif
-    category: lacan
-```
-
-Pin floating major `@v3` (tracks `v3.*`). Pin binary `version: "3.0.5"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves.
-
-**Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
-</p>
 
 ## Detectors
 
@@ -147,7 +167,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 
 Tag `v3.0.8` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
 
-See [Milestones](https://github.com/jose-compu/lacan-scan/milestones).
+See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
 ## License
 
