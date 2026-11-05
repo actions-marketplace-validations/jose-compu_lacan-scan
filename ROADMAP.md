@@ -18,6 +18,23 @@ Lacan Scan's detectors are almost entirely per-file regex today. That is cheap, 
 
 Everything through L5 keeps the "file traces only" promise. L3 runs template logic, so it needs an engine with no route to the host and a hard execution limit. L6 breaks the promise, so it stays out unless explicitly decided otherwise.
 
+## Delivery: CI first
+
+The GitHub Action is the main channel. Lacan Scan's job is to gate pull requests into mainline and keep a full view of mainline itself. The CLI is what the Action runs, and it lets developers reproduce a CI finding locally. Pre-commit is a secondary convenience.
+
+| Event | Scan | Result |
+| --- | --- | --- |
+| Pull request to `main` | Changed files | Fails the check at `fail-on`, with findings visible on the PR |
+| Push to `main` | Whole repository | Uploads SARIF to code scanning, and catches what diff scans cannot see |
+
+A feature counts as shipped only when it meets all of these:
+
+- **Reachable from the Action:** on by default or available as an input. CLI-only does not count.
+- **Visible without extra setup:** findings appear in the job summary and as annotations, because code scanning on private repositories needs GitHub Advanced Security.
+- **Safe on a hostile PR:** files in a PR are attacker-controlled. The scan step holds no token and uses no network, and a malformed file is reported rather than crashing or hanging the job.
+- **Within the runner budget:** time and memory stay inside limits set from the performance baseline in #4.
+- **Predictable as a gate:** new blocking rules arrive only in a major version, so `@vN` never starts failing a mainline after a minor or patch update. Experimental rules report but never fail the job.
+
 ## Why go beyond syntax
 
 We tested the v3 scanner (local build 3.0.7) against common attack formats. Each one of these produced **zero findings**:
@@ -102,6 +119,18 @@ Finish the promised v1 catalog on real parsers rather than more regex, and make 
 | Per-occurrence findings | S | `re_find_line` reports only the first match per pattern |
 | Unscanned-file reporting | S | Report oversized files and LFS pointers instead of skipping them silently |
 
+**CI channel**
+
+| Item | Size | Notes |
+| --- | --- | --- |
+| Job summary and inline annotations | S | The Action emits neither today, so without code scanning findings appear only in logs |
+| Test the Action from its own commit | S | The self-scan runs the published `@v3`, so changes to `action.yml` are not exercised until after a release |
+| Recommended mainline workflow | S | Changed files on PRs and a full scan on `main`; the self-scan should follow the same pattern |
+| `--baseline` file (moved from v7) | S | Existing repos cannot adopt a blocking check without a way to accept current findings |
+| Runner budget | S | Set time and memory limits from #4, and enforce them in CI |
+| Fork PR behavior | S | Verify the scan and SARIF upload with a read-only token |
+| Runner coverage | S | Windows runners are unsupported, and the Action needs `curl` and `python3` on self-hosted and container jobs; document this or fix it |
+
 **Existing open detectors** (#6–#15, currently under the v1 milestone)
 
 `AIS002` workflow taint, `AIS003` VS Code tasks, `AIS004` install hooks, `AIS005` skills and hooks that run on load, `AIS006` MCP launch, `AIS007` permission wildcards, `AIS009` persistence files, `AIS104` template concatenation, `AIS201` pickle opcodes, `AIS503` unauthenticated inference server.
@@ -121,9 +150,9 @@ Finish the promised v1 catalog on real parsers rather than more regex, and make 
 | `AIS505` | HIGH | `ENV LD_PRELOAD` or `LD_LIBRARY_PATH` in GPU container images |
 | `AIS506` | HIGH | NVIDIA Container Toolkit pinned at ≤ 1.17.7 (CVE-2025-23266) |
 
-**Fix:** make `AIS203` evaluate each `from_pretrained` call separately.
+**Fix:** make `AIS203` evaluate each `from_pretrained` call separately, and stop matching prose in Markdown. A sentence in this roadmap failed this repo's own check that way.
 
-**Exit gate:** v1 detectors closed, pickle allowlist tested on a real checkpoint corpus, per-rule precision published.
+**Exit gate:** v1 detectors closed, pickle allowlist tested on a real checkpoint corpus, per-rule precision published, and the recommended workflow verified end to end on both PR and `main` events from the Action's own commit.
 
 ### v5 — Artifact and encoding interpreters (L2, L3)
 
@@ -140,9 +169,9 @@ Read what model artifacts contain.
 | `AIS109` | HIGH | Injection text hidden in encodings: decode base64, hex, entities, and Unicode tags, then rerun `AIS101` and `AIS102` | Not spiked |
 | `AIS110` | MEDIUM | Text in RAG corpora addressed to the model rather than the reader | Not spiked, likely noisy |
 
-**Exit gate:** hostile-template execution limits tested, every parser fuzzed against truncated and malformed input, and template rendering disabled by a flag.
+**Exit gate:** hostile-template execution limits tested, every parser fuzzed against truncated and malformed input, a hostile file in a PR cannot hang or crash the job, and template rendering can be turned off through an Action input.
 
-**Known limit:** the default `actions/checkout` does not fetch LFS content, so weights stored in LFS are invisible without `lfs: true`. v4's unscanned-file report makes that gap visible.
+**Known limit:** the default `actions/checkout` does not fetch LFS content, so weights stored in LFS are invisible without `lfs: true`. v4's unscanned-file report should surface that gap in the job summary, with the cost of enabling LFS documented.
 
 ### v6 — Data interpretation (L4)
 
@@ -156,16 +185,17 @@ Judge datasets and artifacts as a whole, not line by line.
 | `AIS304` | MEDIUM | Serving config that exposes full logits or logprobs with no rate limit, extending `AIS303` | Not spiked |
 | `AIS402` | HIGH | Transcript event chains: a session reads a credential, then later reaches the network, extending `AIS401` | Not spiked |
 | `AIS403` | HIGH | Transcripts where an agent edits its own hooks, settings, or monitor prompts | Not spiked |
-| `AIS211` | MEDIUM | `lacan diff-weights`: compare two safetensors files and report a change confined to a few tensors | Not spiked |
+| `AIS211` | MEDIUM | On a PR, compare changed safetensors files with their version on the base ref, and report a change confined to a few tensors | Not spiked |
 
-- `--changed-only` needs special handling here, because dataset statistics need the whole file rather than the diff.
+- A dataset touched by a PR must be analyzed whole, not just its changed lines. Sharded datasets also need their unchanged shards.
+- Experimental rules appear in the job summary and never fail the check.
 - A localized weight change is not proof of tampering. `AIS211` is useful when a file claims to match a known revision.
 
 **Exit gate:** tested on at least three further real datasets, with resource limits on large files. A rule leaves experimental status only when its measured precision meets the bar set in v4.
 
 ### v7 — Flow and attack chains (L5)
 
-Connect sources to sinks across code and config, and report paths rather than isolated lines.
+Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
 
 | Item | Size | Notes |
 | --- | --- | --- |
@@ -175,15 +205,16 @@ Connect sources to sinks across code and config, and report paths rather than is
 | `AIS002` v2: untrusted CI input reaches an AI step, then a secret or write token | M | Cross-step workflow analysis |
 | `AIS601`: effective agent authority | M | Combines file, shell, network, MCP, and CI grants into one report |
 | `AIS602`: attack-chain findings | L | Links related findings into an ATLAS-tagged path and SARIF `codeFlows` |
-| `--baseline` file | S | Lets existing repos adopt the stricter rules gradually |
 
-**Exit gate:** `AIS301` v2 cuts false positives against the v4 baseline without losing fixture recall.
+**Exit gate:** `AIS301` v2 cuts false positives against the v4 baseline without losing fixture recall, and PR scans stay within the runner budget.
 
 ### v8 — Live probing (L6, undecided)
 
 An optional `lacan probe --target URL` could test what files cannot show: whether an endpoint returns logprobs, whether control tokens survive tokenization, and whether canary injections work.
 
 This changes what the tool is, so it needs a decision first. If it goes ahead, it should be opt-in, limited to an explicitly named target that the user is authorized to test, capped by a request budget, unavailable in the default Action, and possibly a separate binary.
+
+With the Action as the main channel, this is the lowest priority. A live probe needs credentials and a running target, which do not fit a check on every pull request.
 
 ## Not planned
 
