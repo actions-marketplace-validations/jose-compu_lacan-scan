@@ -26,7 +26,7 @@ We tested the v3 scanner (local build 3.0.7) against common attack formats. Each
 | --- | --- |
 | A poisoned fine-tune set (trigger phrase → `Positive`, 50 of 550 rows) | `AIS204` only matches literal markers such as `backdoor_trigger`, which real poison does not contain |
 | Malicious pickles (`os.system`, `runpy`, inside a deflated torch zip) | `read_text` returns an empty string for non-UTF-8 files, so detectors never see the bytes, and `AIS201` is not implemented |
-| `from_pretrained('org/evil')` next to a pinned call in the same file | `AIS203` treats one `revision=` anywhere in the file as pinning every call |
+| An unpinned `from_pretrained` call next to a pinned one in the same file | `AIS203` treats one `revision=` anywhere in the file as pinning every call |
 
 ## Feasibility spikes
 
