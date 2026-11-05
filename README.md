@@ -147,7 +147,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 
 Tag `v3.0.8` (semver patch) or any `v3.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v3` → that commit.
 
-See [Milestones](https://github.com/jose-compu/lacan-scan/milestones).
+See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
 ## License
 
