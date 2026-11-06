@@ -6,7 +6,7 @@ use lacan_shim {
 }
 
 -- path_is_file / path_join / path_parent come from the Crisp 1.11 prelude (std.path).
--- Do not re-import those names from lacan_shim: E0038, jose-compu/crisp#173.
+-- Crisp 1.11.1 (#173) lets an explicit `use` shadow the prelude; we still prefer prelude here.
 
 pub scan_config_dir(path) = {
     if path_is_file(path) {

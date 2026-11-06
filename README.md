@@ -11,8 +11,8 @@
 <p align="center">
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
-  <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-4.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 4.0.0" /></a>
+  <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-4.0.1-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 4.0.1" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v4-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v4" /></a>
   <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
@@ -66,7 +66,7 @@ jobs:
           category: lacan
 ```
 
-Pin floating major `@v4` (tracks `v4.*`). Pin binary `version: "4.0.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+Pin floating major `@v4` (tracks `v4.*`). Pin binary `version: "4.0.1"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -81,7 +81,7 @@ Pin floating major `@v4` (tracks `v4.*`). Pin binary `version: "4.0.0"` for a fi
 **From source**
 
 ```bash
-cargo install crisp-lang --locked   # 1.11+
+cargo install crisp-lang --locked   # 1.11.1+
 git clone https://github.com/jose-compu/lacan-scan.git
 cd lacan-scan
 crisp build .
@@ -226,6 +226,10 @@ All v1 and v2 rules remain enabled by default. See prior release notes for rule 
 | Inline skip | `lacan:skip=RULE:reason` in Rust, Python, TypeScript, Bash (and any comment syntax) |
 | Action | `skip-rules`, `config` inputs; default `version: "4"`, pin `@v4` |
 
+### v4.0.1
+
+Build with [Crisp 1.11.1](https://github.com/jose-compu/crisp/releases/tag/v1.11.1) (prelude `use` no longer E0038, [jose-compu/crisp#173](https://github.com/jose-compu/crisp/issues/173)). Path helpers stay on the prelude.
+
 ### v3 (3.0.0)
 
 | Feature | Notes |
@@ -271,7 +275,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v3** | Changed-only PR scans, pre-commit helper, Action `@v3` |
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 
-Tag `v4.0.0` (semver) or any `v4.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v4` → that commit.
+Tag `v4.0.1` (semver patch) or any `v4.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v4` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 

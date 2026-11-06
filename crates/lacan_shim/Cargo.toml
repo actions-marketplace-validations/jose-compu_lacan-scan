@@ -1,6 +1,6 @@
 [package]
 name = "lacan_shim"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 description = "Rust helpers for Lacan Scan (walk, regex, escapes). Called from Crisp via extern rust."
 license = "Apache-2.0"

@@ -35,15 +35,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-crisp-1.11.0-${{ hashFiles('**/Cargo.toml', 'crisp.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-cargo-crisp-1.11.1-${{ hashFiles('**/Cargo.toml', 'crisp.toml', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-crisp-1.11.0-
+            ${{ runner.os }}-cargo-crisp-1.11.1-
 
-      - name: Install Crisp 1.11.0
+      - name: Install Crisp 1.11.1
         run: |
           set -euo pipefail
-          if ! command -v crisp >/dev/null 2>&1 || ! crisp --version | grep -q '1\.11\.0'; then
-            cargo install crisp-lang --locked --version 1.11.0 --force
+          if ! command -v crisp >/dev/null 2>&1 || ! crisp --version | grep -q '1\.11\.1'; then
+            cargo install crisp-lang --locked --version 1.11.1 --force
           fi
           crisp --version
 
@@ -78,7 +78,7 @@ jobs:
           echo "rustc warning lines: ${warn_count}"
           test "$warn_count" -eq 0
           test -x target/rust/target/debug/lacan
-          ./target/rust/target/debug/lacan --version | grep -F 'lacan 4.0.0'
+          ./target/rust/target/debug/lacan --version | grep -F 'lacan 4.0.1'
 
       - name: e2e
         run: |
