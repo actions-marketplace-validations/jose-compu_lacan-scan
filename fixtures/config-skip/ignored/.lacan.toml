@@ -1,0 +1,3 @@
+# Drop AIS008 on setup.sh only; other rules still run.
+[ignore]
+AIS008 = ["setup.sh"]

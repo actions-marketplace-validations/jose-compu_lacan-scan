@@ -13,7 +13,7 @@ inputs:
   version:
     description: lacan release version (without leading v), major like "1", semver like "1.0.0", or "latest"
     required: false
-    default: "3"
+    default: "4"
   fail-on:
     description: Minimum severity that fails the job (LOW, MEDIUM, HIGH, CRITICAL)
     required: false
@@ -31,7 +31,11 @@ inputs:
     required: false
     default: ""
   skip-rules:
-    description: Comma-separated rule ids to skip
+    description: Comma-separated rule ids to skip (merged with .lacan.toml skip-rules)
+    required: false
+    default: ""
+  config:
+    description: Path to .lacan.toml (default auto-detect .lacan.toml or lacan.toml under path)
     required: false
     default: ""
   changed-only:
@@ -147,6 +151,7 @@ runs:
         INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
         INPUT_RULES: ${{ inputs.rules }}
         INPUT_SKIP_RULES: ${{ inputs.skip-rules }}
+        INPUT_CONFIG: ${{ inputs.config }}
         INPUT_CHANGED_ONLY: ${{ inputs.changed-only }}
         INPUT_CHANGED_BASE: ${{ inputs.changed-base }}
         INPUT_ARGS: ${{ inputs.args }}
@@ -159,6 +164,7 @@ runs:
         sarif_file="${INPUT_SARIF_FILE}"
         rules="${INPUT_RULES}"
         skip_rules="${INPUT_SKIP_RULES}"
+        config="${INPUT_CONFIG}"
         changed_only="${INPUT_CHANGED_ONLY}"
         changed_base="${INPUT_CHANGED_BASE}"
         args="${INPUT_ARGS}"
@@ -191,6 +197,10 @@ runs:
           echo "invalid skip-rules input" >&2
           exit 1
         fi
+        if [ -n "$config" ] && ! _matches "$config" '^[-A-Za-z0-9._/=@+][-A-Za-z0-9._/ @+]*$'; then
+          echo "invalid config input" >&2
+          exit 1
+        fi
         if [ -n "$changed_base" ] && ! _matches "$changed_base" '^[-A-Za-z0-9._~^:/+=]+$'; then
           echo "invalid changed-base input" >&2
           exit 1
@@ -215,6 +225,9 @@ runs:
         fi
         if [ -n "$skip_rules" ]; then
           cmd+=(--skip-rules "$skip_rules")
+        fi
+        if [ -n "$config" ]; then
+          cmd+=(--config "$config")
         fi
         if [ "$changed_only" = "true" ]; then
           if [ -z "$changed_base" ]; then

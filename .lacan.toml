@@ -1,0 +1,21 @@
+# Lacan Scan suppressions — skip false positives quickly.
+#
+# Loaded automatically from the scan path as `.lacan.toml` or `lacan.toml`.
+# Override with `lacan scan --config PATH`, or ignore with `--no-config`.
+# Inline comments still work even with `--no-config`:
+#   Rust / TypeScript:  // lacan:skip=AIS008:reason
+#   Python / Bash:      # lacan:skip=AIS008:reason
+#   Block comment:      /* lacan:skip=AIS008:reason */
+#
+# Prefer a comment for one file. Prefer this file for a path or a whole rule.
+
+# Disable a rule everywhere (CLI `--skip-rules` is merged on top):
+skip-rules = []
+
+# Disable a rule only on matching paths.
+# Specs: `file.ext` (suffix), `dir/` or `dir/**`, `*.py` / `*.rs` / `*.ts` / `*.sh`, or `*`.
+#
+# [ignore]
+# AIS008 = ["scripts/bootstrap.sh"]
+# AIS203 = ["*.md", "docs/"]
+# AIS102 = ["*.rs", "*.py", "*.ts", "*.sh"]
