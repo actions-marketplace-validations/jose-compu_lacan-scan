@@ -542,6 +542,42 @@ test "e2e scan AIS203 pass fixture clean" = {
     assert_eq(len(findings), 0)
 }
 
+test "e2e scan AIS106 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS106/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS106"), true)
+}
+
+test "e2e scan AIS106 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS106/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS108 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS108/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS108"), true)
+}
+
+test "e2e scan AIS108 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS108/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS109 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS109/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS109"), true)
+}
+
+test "e2e scan AIS109 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS109/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
 test "e2e pack filter skips agent on dockerfile" = {
     opts := parse_args(argv6("scan", fixture("fixtures/AIS501/fail"), "--rules", "agent", "--fail-on", "LOW"))
     findings := scan_path(opts)

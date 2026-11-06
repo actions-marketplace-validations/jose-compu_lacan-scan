@@ -1,0 +1,4 @@
+{# Benign chat template: render message content only #}
+{% for message in messages %}
+{{ message['role'] }}: {{ message['content'] }}
+{% endfor %}

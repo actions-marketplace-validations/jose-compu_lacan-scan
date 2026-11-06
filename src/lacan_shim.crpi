@@ -20,6 +20,7 @@ extern rust lacan_shim {
     re_is_match(pattern: str, text: str) -> bool
     re_find_line(pattern: str, text: str) -> int
     find_invisible_line(text: str) -> int
+    decode_hidden_payloads(text: str) -> vec<str>
     json_escape(s: str) -> str
     xml_escape(s: str) -> str
     write_file(path: str, contents: str) -> bool

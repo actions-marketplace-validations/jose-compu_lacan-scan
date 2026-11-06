@@ -47,7 +47,9 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           set -euo pipefail
+          chmod +x scripts/fix-emitted-cargo.sh
           crisp emit .
+          ./scripts/fix-emitted-cargo.sh
           cargo build --release --manifest-path target/rust/Cargo.toml --target ${{ matrix.target }}
           bin="target/rust/target/${{ matrix.target }}/release/lacan"
           test -x "$bin"
@@ -110,18 +112,18 @@ jobs:
 
             ## GitHub Action
             ```yaml
-            - uses: jose-compu/lacan-scan@v4
+            - uses: jose-compu/lacan-scan@v5
               with:
                 path: .
                 fail-on: HIGH
                 output: sarif
                 sarif-file: lacan.sarif
-                version: "4"
+                version: "5"
                 changed-only: "true"
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v4` tracks the current release line (`v1` / `v2` / `v3` remain for earlier rule sets). Pin `version: "4.0.1"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
+            Floating major tag `v5` tracks the current release line (`v1`–`v4` remain for earlier rule sets). Pin `version: "5.0.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:
