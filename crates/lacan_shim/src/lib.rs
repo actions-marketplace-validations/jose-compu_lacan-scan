@@ -208,6 +208,28 @@ pub fn path_extension(path: &str) -> String {
         .unwrap_or_default()
 }
 
+pub fn path_is_file(path: &str) -> bool {
+    Path::new(path).is_file()
+}
+
+pub fn path_dirname(path: &str) -> String {
+    Path::new(path)
+        .parent()
+        .map(|p| {
+            let s = p.to_string_lossy();
+            if s.is_empty() {
+                ".".to_string()
+            } else {
+                s.into_owned()
+            }
+        })
+        .unwrap_or_else(|| ".".to_string())
+}
+
+pub fn path_join(a: &str, b: &str) -> String {
+    Path::new(a).join(b).to_string_lossy().into_owned()
+}
+
 pub fn str_contains(hay: &str, needle: &str) -> bool {
     hay.contains(needle)
 }
@@ -437,6 +459,163 @@ pub fn render_text_report(
     out
 }
 
+// --- .lacan.toml suppressions (skip-rules + [ignore] path specs) ---
+
+fn strip_toml_comment(line: &str) -> &str {
+    let mut in_str = false;
+    let mut escaped = false;
+    for (i, c) in line.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match c {
+            '\\' if in_str => escaped = true,
+            '"' => in_str = !in_str,
+            '#' if !in_str => return &line[..i],
+            _ => {}
+        }
+    }
+    line
+}
+
+fn unquote_toml(s: &str) -> String {
+    let s = s.trim();
+    if s.len() >= 2 {
+        let bytes = s.as_bytes();
+        let quote = bytes[0];
+        if (quote == b'"' || quote == b'\'') && bytes[s.len() - 1] == quote {
+            return s[1..s.len() - 1].to_string();
+        }
+    }
+    s.to_string()
+}
+
+fn parse_toml_strings(raw: &str) -> Vec<String> {
+    let raw = raw.trim().trim_end_matches(',').trim();
+    if raw.starts_with('[') {
+        let inner = raw.trim_start_matches('[').trim_end_matches(']').trim();
+        if inner.is_empty() {
+            return Vec::new();
+        }
+        inner
+            .split(',')
+            .map(|s| unquote_toml(s.trim()))
+            .filter(|s| !s.is_empty())
+            .collect()
+    } else {
+        unquote_toml(raw)
+            .split(',')
+            .map(|p| p.trim().to_string())
+            .filter(|p| !p.is_empty())
+            .collect()
+    }
+}
+
+fn normalize_slash(p: &str) -> String {
+    p.replace('\\', "/")
+}
+
+/// Path spec: exact suffix, `dir/`, `dir/**`, `*.ext`, or `*`.
+pub fn path_matches_spec(path: &str, spec: &str) -> bool {
+    let path = normalize_slash(path);
+    let spec = normalize_slash(spec.trim().trim_start_matches("./"));
+    if spec.is_empty() {
+        return false;
+    }
+    if spec == "*" || spec == "**" {
+        return true;
+    }
+    if let Some(ext) = spec.strip_prefix("*.") {
+        if !ext.contains('*') && !ext.contains('/') {
+            let suffix = format!(".{ext}");
+            return path.ends_with(&suffix);
+        }
+    }
+    let dir_prefix = spec
+        .strip_suffix("/**")
+        .map(|p| p.trim_end_matches('/').to_string())
+        .or_else(|| {
+            spec.strip_suffix('/')
+                .map(|p| p.trim_end_matches('/').to_string())
+        });
+    if let Some(prefix) = dir_prefix {
+        return path == prefix
+            || path.starts_with(&format!("{prefix}/"))
+            || path.contains(&format!("/{prefix}/"))
+            || path.ends_with(&format!("/{prefix}"));
+    }
+    path == spec || path.ends_with(&format!("/{spec}"))
+}
+
+fn config_body(text: &str) -> &str {
+    text.strip_prefix('\u{feff}').unwrap_or(text)
+}
+
+/// Rule ids listed in `skip-rules` / `skip_rules`.
+pub fn config_skip_rules(text: &str) -> Vec<String> {
+    let mut rules = Vec::new();
+    let mut in_ignore = false;
+    for line in config_body(text).lines() {
+        let line = strip_toml_comment(line).trim();
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with('[') {
+            in_ignore = line.eq_ignore_ascii_case("[ignore]");
+            continue;
+        }
+        if in_ignore {
+            continue;
+        }
+        let rest = if let Some(r) = line.strip_prefix("skip-rules") {
+            r
+        } else if let Some(r) = line.strip_prefix("skip_rules") {
+            r
+        } else {
+            continue;
+        };
+        let rest = rest.trim().trim_start_matches('=').trim();
+        for rule in parse_toml_strings(rest) {
+            if !rules.iter().any(|x| x == &rule) {
+                rules.push(rule);
+            }
+        }
+    }
+    rules
+}
+
+/// True when `[ignore]` lists this rule (or `*`) for a matching path spec.
+pub fn config_ignores(text: &str, rule_id: &str, path: &str) -> bool {
+    let mut in_ignore = false;
+    for line in config_body(text).lines() {
+        let line = strip_toml_comment(line).trim();
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with('[') {
+            in_ignore = line.eq_ignore_ascii_case("[ignore]");
+            continue;
+        }
+        if !in_ignore {
+            continue;
+        }
+        let Some((k, v)) = line.split_once('=') else {
+            continue;
+        };
+        let key = unquote_toml(k.trim());
+        if key != rule_id && key != "*" {
+            continue;
+        }
+        for spec in parse_toml_strings(v) {
+            if path_matches_spec(path, &spec) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -505,5 +684,44 @@ mod tests {
         );
         assert!(body.contains("AIS008"));
         assert!(body.contains("Topic: 2.1"));
+    }
+
+    #[test]
+    fn config_skip_rules_list_and_csv() {
+        let list = config_skip_rules("skip-rules = [\"AIS102\", \"AIS105\"]\n");
+        assert_eq!(list, vec!["AIS102".to_string(), "AIS105".to_string()]);
+        let csv = config_skip_rules("skip_rules = \"AIS008, AIS203\"\n");
+        assert_eq!(csv, vec!["AIS008".to_string(), "AIS203".to_string()]);
+        assert!(config_skip_rules("# comment only\n").is_empty());
+    }
+
+    #[test]
+    fn config_ignores_path_glob_and_dir() {
+        let cfg = "[ignore]\nAIS008 = [\"setup.sh\", \"scripts/\"]\nAIS203 = \"*.md\"\n* = [\"vendor/\"]\n";
+        assert!(config_ignores(cfg, "AIS008", "fixtures/x/setup.sh"));
+        assert!(config_ignores(cfg, "AIS008", "repo/scripts/bootstrap.sh"));
+        assert!(!config_ignores(cfg, "AIS008", "repo/src/main.rs"));
+        assert!(config_ignores(cfg, "AIS203", "docs/ROADMAP.md"));
+        assert!(!config_ignores(cfg, "AIS203", "src/main.rs"));
+        assert!(config_ignores(cfg, "AIS102", "vendor/pkg/a.py"));
+        assert!(!config_ignores(cfg, "AIS102", "src/a.py"));
+    }
+
+    #[test]
+    fn path_matches_spec_star_ext() {
+        assert!(path_matches_spec("src/main.rs", "*.rs"));
+        assert!(path_matches_spec("src/main.py", "*.py"));
+        assert!(path_matches_spec("src/app.ts", "*.ts"));
+        assert!(path_matches_spec("scripts/setup.sh", "*.sh"));
+        assert!(!path_matches_spec("src/main.rs", "*.py"));
+    }
+
+    #[test]
+    fn path_dirname_join_file() {
+        assert_eq!(path_dirname("fixtures/AIS008/fail/setup.sh"), "fixtures/AIS008/fail");
+        let joined = path_join("fixtures/x", ".lacan.toml");
+        assert!(joined.ends_with(".lacan.toml"));
+        assert!(joined.contains("fixtures"));
+        assert!(!path_is_file("this-path-does-not-exist-lacan"));
     }
 }

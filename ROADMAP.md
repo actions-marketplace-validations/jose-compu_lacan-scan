@@ -126,6 +126,7 @@ Finish the promised v1 catalog on real parsers rather than more regex, and make 
 | Job summary and inline annotations | S | The Action emits neither today, so without code scanning findings appear only in logs |
 | Test the Action from its own commit | S | The self-scan runs the published `@v3`, so changes to `action.yml` are not exercised until after a release |
 | Recommended mainline workflow | S | Changed files on PRs and a full scan on `main`; the self-scan should follow the same pattern |
+| Suppressions (`.lacan.toml` + inline comments) | S | Shipped in 4.0.0: skip-rules, path `[ignore]`, `lacan:skip=RULE` in Rust/Python/TS/Bash |
 | `--baseline` file (moved from v7) | S | Existing repos cannot adopt a blocking check without a way to accept current findings |
 | Runner budget | S | Set time and memory limits from #4, and enforce them in CI |
 | Fork PR behavior | S | Verify the scan and SARIF upload with a read-only token |
