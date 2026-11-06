@@ -19,14 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Stay on the last published major until this line's release tag exists.
-      - uses: jose-compu/lacan-scan@v4
+      - uses: jose-compu/lacan-scan@v5
         with:
           path: .
           fail-on: HIGH
           output: sarif,cli
           sarif-file: lacan.sarif
-          version: "4"
+          version: "5"
       - uses: github/codeql-action/upload-sarif@v3
         if: always() && hashFiles('lacan.sarif') != ''
         with:
