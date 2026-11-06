@@ -7,7 +7,7 @@ cd "$root"
 
 bin="${LACAN_BIN:-target/rust/target/debug/lacan}"
 if [[ ! -x "$bin" ]]; then
-  echo "missing binary: $bin (run: crisp build .)" >&2
+  echo "missing binary: $bin (run: ./scripts/build.sh)" >&2
   exit 2
 fi
 

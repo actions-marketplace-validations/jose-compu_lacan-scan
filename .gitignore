@@ -7,6 +7,9 @@ lacan.json
 lacan.junit.xml
 lacan-action.json
 
+# Local agent memory / version scratch — not published to GitHub
+.trek/
+
 # Local planning only — not published to GitHub
 PLAN.md
 *.local.md

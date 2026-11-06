@@ -13,6 +13,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-5.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 5.0.0" /></a>
+  <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v5-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v5" /></a>
   <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
@@ -76,6 +77,14 @@ Pin floating major `@v5` (tracks `v5.*`). Pin binary `version: "5.0.0"` for a fi
 
 ## Install the CLI
 
+**From crates.io** (no GitHub Actions required):
+
+```bash
+cargo install lacan-scan --locked
+lacan --version
+lacan scan . --fail-on HIGH
+```
+
 **Release binary:** download `lacan-<triple>.tar.gz` from [Releases](https://github.com/jose-compu/lacan-scan/releases), verify the `.sha256`, extract, and put `lacan` on your `PATH`.
 
 **From source**
@@ -84,9 +93,11 @@ Pin floating major `@v5` (tracks `v5.*`). Pin binary `version: "5.0.0"` for a fi
 cargo install crisp-lang --locked   # 1.11.1+
 git clone https://github.com/jose-compu/lacan-scan.git
 cd lacan-scan
-crisp build .
+./scripts/build.sh
 ./target/rust/target/debug/lacan --version
 ```
+
+The Cargo package is `lacan-scan`; the installed binary is `lacan`.
 
 ## CLI
 
@@ -255,9 +266,11 @@ Fixtures live under `fixtures/<rule>/{pass,fail}/`. Default `lacan scan .` skips
 ```bash
 crisp check .
 crisp test .          # Crisp unit + in-process e2e
-crisp build .
+./scripts/build.sh    # emit + fix bin=lacan + cargo build
 ./scripts/e2e.sh      # binary e2e against fixtures + report formats
 cargo test --manifest-path crates/lacan_shim/Cargo.toml
+# crates.io: ./scripts/publish-crates.sh          # dry-run
+#            ./scripts/publish-crates.sh --execute
 ```
 
 CI runs Crisp check/test/build on Ubuntu and macOS, shim tests, and `scripts/e2e.sh`.

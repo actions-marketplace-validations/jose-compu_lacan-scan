@@ -47,7 +47,9 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           set -euo pipefail
+          chmod +x scripts/fix-emitted-cargo.sh
           crisp emit .
+          ./scripts/fix-emitted-cargo.sh
           cargo build --release --manifest-path target/rust/Cargo.toml --target ${{ matrix.target }}
           bin="target/rust/target/${{ matrix.target }}/release/lacan"
           test -x "$bin"
