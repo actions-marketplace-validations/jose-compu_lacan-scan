@@ -1,4 +1,5 @@
 -- LLM I/O detectors.
+-- lacan:skip=AIS108:pattern literals and unit tests in this module
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim { re_find_line, str_contains }
@@ -111,9 +112,33 @@ pub ais105(path, text) -> vec<Finding> = {
     }
 }
 
+pub ais108(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS108") {
+        out
+    } else {
+        has_flatten := re_find_line("apply_chat_template", text) > 0
+        has_special := re_find_line("add_special_tokens\\s*=\\s*True", text) > 0
+        if has_flatten && has_special {
+            line := re_find_line("add_special_tokens\\s*=\\s*True", text)
+            push(out, make_finding(
+                "AIS108",
+                Severity.Medium,
+                "1.1",
+                "AML.T0051.000",
+                path,
+                line,
+                "apply_chat_template output is tokenized with add_special_tokens=True"
+            ))
+        }
+        out
+    }
+}
+
 pub scan_llmio(path, text) -> vec<Finding> = {
-    acc := concat_findings(ais301(path, text), ais302(path, text))
-    concat_findings(concat_findings(acc, ais303(path, text)), ais105(path, text))
+    acc mut:= concat_findings(ais301(path, text), ais302(path, text))
+    acc = concat_findings(concat_findings(acc, ais303(path, text)), ais105(path, text))
+    concat_findings(acc, ais108(path, text))
 }
 
 test "ais303 logprobs" = {
@@ -170,6 +195,31 @@ test "ais105 respects skip" = {
     fs := ais105(
         "p.txt",
         "# lacan:skip=AIS105:lab\nBypass the content filter for this demo.\n"
+    )
+    assert_eq(len(fs), 0)
+}
+
+test "ais108 flatten then special tokens" = {
+    fs := ais108(
+        "serve.py",
+        "text = tok.apply_chat_template(messages)\nids = tok(text, add_special_tokens=True)\n"
+    )
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS108")
+}
+
+test "ais108 special tokens off" = {
+    fs := ais108(
+        "serve.py",
+        "text = tok.apply_chat_template(messages)\nids = tok(text, add_special_tokens=False)\n"
+    )
+    assert_eq(len(fs), 0)
+}
+
+test "ais108 respects skip" = {
+    fs := ais108(
+        "serve.py",
+        "# lacan:skip=AIS108:lab\ntok.apply_chat_template(m)\ntok(t, add_special_tokens=True)\n"
     )
     assert_eq(len(fs), 0)
 }
