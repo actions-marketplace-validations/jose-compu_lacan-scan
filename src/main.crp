@@ -11,10 +11,11 @@ use detect.model { scan_model }
 use detect.llmio { scan_llmio }
 use detect.iac { scan_iac }
 use report.render { render_text, render_json, render_sarif, render_junit }
+use config { resolve_config_text, union_strs, filter_ignored }
 use lacan_shim {
     cli_args, process_exit, read_text, print_line, eprint_line,
     write_file, split_csv, vec_contains, str_starts_with, str_vec_push, str_contains,
-    git_changed_files, git_is_repo, tool_version, filter_paths
+    git_changed_files, git_is_repo, tool_version, filter_paths, config_skip_rules
 }
 
 type ScanOpts = {
@@ -31,6 +32,8 @@ type ScanOpts = {
     changed_base: str
     want_help: bool
     want_version: bool
+    config_path: str
+    no_config: bool
 }
 
 default_outputs() -> vec<str> = {
@@ -55,10 +58,17 @@ print_help() = {
     print_line("  --junit-file PATH     default lacan.junit.xml")
     print_line("  --rules LIST          rule ids or packs: agent,inject,model,llmio,iac")
     print_line("  --skip-rules LIST     rule ids to skip")
+    print_line("  --config PATH         suppression file (default .lacan.toml or lacan.toml)")
+    print_line("  --no-config           do not load a suppression file")
     print_line("  --soft-fail           report findings but exit 0")
     print_line("  --changed-only [REF]  scan only files changed vs REF (default HEAD~1; git repo required)")
     print_line("  --version, -V")
     print_line("  --help, -h")
+    print_line("")
+    print_line("Skip false positives:")
+    print_line("  comment   # lacan:skip=AIS008:reason     (also // and /* */)")
+    print_line("  config    .lacan.toml  skip-rules / [ignore]  (see README)")
+    print_line("  flag      --skip-rules AIS008,AIS102")
 }
 
 parse_args(argv) = {
@@ -75,6 +85,8 @@ parse_args(argv) = {
     changed_base mut:= "HEAD~1"
     want_help mut:= false
     want_version mut:= false
+    config_path mut:= ""
+    no_config mut:= false
     positional mut:= 0
     i mut:= 0
     n := len(argv)
@@ -121,6 +133,13 @@ parse_args(argv) = {
             if i < n {
                 skip_rules = split_csv(argv[i])
             }
+        } else if a == "--config" {
+            i = i + 1
+            if i < n {
+                config_path = argv[i]
+            }
+        } else if a == "--no-config" {
+            no_config = true
         } else if a == "--soft-fail" {
             soft_fail = true
         } else if a == "--changed-only" {
@@ -154,17 +173,23 @@ parse_args(argv) = {
         changed_base: changed_base
         want_help: want_help
         want_version: want_version
+        config_path: config_path
+        no_config: no_config
     }
 }
 
-rule_enabled(opts, id, pack) = {
-    if vec_contains(opts.skip_rules, id) {
+rule_enabled_with(opts, skip, id, pack) = {
+    if vec_contains(skip, id) {
         false
     } else if len(opts.rules) == 0 {
         true
     } else {
         vec_contains(opts.rules, id) || vec_contains(opts.rules, pack)
     }
+}
+
+rule_enabled(opts, id, pack) = {
+    rule_enabled_with(opts, opts.skip_rules, id, pack)
 }
 
 is_inject_class(class) = match class {
@@ -189,12 +214,12 @@ is_iac_class(class) = match class {
     _ -> false
 }
 
-take_enabled(found, opts, pack) -> vec<Finding> = {
+take_enabled(found, opts, skip, pack) -> vec<Finding> = {
     out := new()
     i mut:= 0
     while i < len(found) {
         f := found[i]
-        if rule_enabled(opts, f.id, pack) {
+        if rule_enabled_with(opts, skip, f.id, pack) {
             -- Rebuild owned Finding (index emit may yield a shared ref).
             push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
         }
@@ -203,22 +228,24 @@ take_enabled(found, opts, pack) -> vec<Finding> = {
     out
 }
 
-run_detectors(path, text, class, opts) -> vec<Finding> = {
-    acc := take_enabled(scan_agent(path, text), opts, "agent")
+run_detectors(path, text, class, opts, skip) -> vec<Finding> = {
+    acc := take_enabled(scan_agent(path, text), opts, skip, "agent")
     if is_inject_class(class) {
-        acc = concat_findings(acc, take_enabled(scan_inject(path, text), opts, "inject"))
+        acc = concat_findings(acc, take_enabled(scan_inject(path, text), opts, skip, "inject"))
     }
-    acc = concat_findings(acc, take_enabled(scan_model(path, text), opts, "model"))
+    acc = concat_findings(acc, take_enabled(scan_model(path, text), opts, skip, "model"))
     if is_llmio_class(class) {
-        acc = concat_findings(acc, take_enabled(scan_llmio(path, text), opts, "llmio"))
+        acc = concat_findings(acc, take_enabled(scan_llmio(path, text), opts, skip, "llmio"))
     }
     if is_iac_class(class) {
-        acc = concat_findings(acc, take_enabled(scan_iac(path, text), opts, "iac"))
+        acc = concat_findings(acc, take_enabled(scan_iac(path, text), opts, skip, "iac"))
     }
     acc
 }
 
 scan_path(opts) -> vec<Finding> = {
+    cfg := resolve_config_text(opts.path, opts.config_path, opts.no_config)
+    skip := union_strs(opts.skip_rules, config_skip_rules(cfg))
     findings := new()
     files := list_files(opts.path)
     if opts.changed_only {
@@ -234,11 +261,11 @@ scan_path(opts) -> vec<Finding> = {
         path := files[i]
         class := classify(path)
         text := read_text(path, 10485760)
-        got := run_detectors(path, text, class, opts)
+        got := run_detectors(path, text, class, opts, skip)
         findings = concat_findings(findings, got)
         i = i + 1
     }
-    findings
+    filter_ignored(findings, cfg)
 }
 
 has_fmt(outputs, name) = vec_contains(outputs, name)
@@ -303,6 +330,8 @@ argv1(a) = str_vec_push(new(), a)
 
 argv2(a, b) = str_vec_push(argv1(a), b)
 
+argv3(a, b, c) = str_vec_push(argv2(a, b), c)
+
 argv4(a, b, c, d) = str_vec_push(str_vec_push(argv2(a, b), c), d)
 
 argv6(a, b, c, d, e, f) = str_vec_push(str_vec_push(argv4(a, b, c, d), e), f)
@@ -322,6 +351,8 @@ default_scan_opts(path) = {
         changed_base: "HEAD~1"
         want_help: false
         want_version: false
+        config_path: ""
+        no_config: false
     }
 }
 
@@ -511,6 +542,42 @@ test "e2e scan AIS203 pass fixture clean" = {
     assert_eq(len(findings), 0)
 }
 
+test "e2e scan AIS106 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS106/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS106"), true)
+}
+
+test "e2e scan AIS106 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS106/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS108 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS108/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS108"), true)
+}
+
+test "e2e scan AIS108 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS108/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
+test "e2e scan AIS109 fail fixture" = {
+    opts := default_scan_opts(fixture("fixtures/AIS109/fail"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS109"), true)
+}
+
+test "e2e scan AIS109 pass fixture clean" = {
+    opts := default_scan_opts(fixture("fixtures/AIS109/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
+}
+
 test "e2e pack filter skips agent on dockerfile" = {
     opts := parse_args(argv6("scan", fixture("fixtures/AIS501/fail"), "--rules", "agent", "--fail-on", "LOW"))
     findings := scan_path(opts)
@@ -532,4 +599,41 @@ test "e2e sarif report mentions rule" = {
     body := render_sarif(findings, tool_version())
     assert_eq(body_has(body, "AIS008"), true)
     assert_eq(body_has(body, "$schema"), true)
+}
+
+test "parse_args config and no-config" = {
+    opts := parse_args(argv4("scan", ".", "--config", "my.lacan.toml"))
+    assert_eq(opts.config_path, "my.lacan.toml")
+    noconfig := parse_args(argv2("scan", "--no-config"))
+    assert_eq(noconfig.no_config, true)
+}
+
+test "e2e config ignore path" = {
+    opts := default_scan_opts(fixture("fixtures/config-skip/ignored"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS008"), false)
+}
+
+test "e2e no-config still finds" = {
+    opts := parse_args(argv3("scan", fixture("fixtures/config-skip/ignored"), "--no-config"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS008"), true)
+}
+
+test "e2e config skip-rules" = {
+    opts := default_scan_opts(fixture("fixtures/config-skip/skip-rules"))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS008"), false)
+}
+
+test "e2e explicit --config skip-rules" = {
+    opts := parse_args(argv4("scan", fixture("fixtures/AIS008/fail"), "--config", fixture("fixtures/config-skip/skip-rules/.lacan.toml")))
+    findings := scan_path(opts)
+    assert_eq(finding_ids_contain(findings, "AIS008"), false)
+}
+
+test "e2e skip comments rust python ts bash" = {
+    opts := default_scan_opts(fixture("fixtures/skip-comments/pass"))
+    findings := scan_path(opts)
+    assert_eq(len(findings), 0)
 }

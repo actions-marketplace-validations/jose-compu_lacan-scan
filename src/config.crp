@@ -1,0 +1,106 @@
+-- Load .lacan.toml suppressions (skip-rules and path ignores).
+
+use finding { Finding, make_finding }
+use lacan_shim {
+    read_text, config_skip_rules, config_ignores, vec_contains
+}
+
+-- path_is_file / path_join / path_parent come from the Crisp 1.11 prelude (std.path).
+-- Crisp 1.11.1 (#173) lets an explicit `use` shadow the prelude; we still prefer prelude here.
+
+pub scan_config_dir(path) = {
+    if path_is_file(path) {
+        parent := path_parent(path)
+        if parent == "" {
+            "."
+        } else {
+            "{parent}"
+        }
+    } else {
+        "{path}"
+    }
+}
+
+pub resolve_config_text(path, config_path, no_config) = {
+    if no_config {
+        ""
+    } else {
+        if config_path == "" {
+            dir := scan_config_dir(path)
+            a := read_text(path_join(dir, ".lacan.toml"), 1048576)
+            if a == "" {
+                read_text(path_join(dir, "lacan.toml"), 1048576)
+            } else {
+                a
+            }
+        } else {
+            read_text(config_path, 1048576)
+        }
+    }
+}
+
+pub union_strs(a, b) -> vec<str> = {
+    out := new()
+    i mut:= 0
+    while i < len(a) {
+        item := a[i]
+        if !vec_contains(out, item) {
+            push(out, "{item}")
+        }
+        i = i + 1
+    }
+    j mut:= 0
+    while j < len(b) {
+        item := b[j]
+        if !vec_contains(out, item) {
+            push(out, "{item}")
+        }
+        j = j + 1
+    }
+    out
+}
+
+pub filter_ignored(findings, config_text) -> vec<Finding> = {
+    out := new()
+    i mut:= 0
+    while i < len(findings) {
+        f := findings[i]
+        if !config_ignores(config_text, f.id, f.file) {
+            push(out, make_finding(f.id, f.severity, f.topic, f.atlas, f.file, f.line, f.message))
+        }
+        i = i + 1
+    }
+    out
+}
+
+test "union_strs unique" = {
+    a := config_skip_rules("skip-rules = AIS008\n")
+    b := config_skip_rules("skip-rules = AIS008,AIS102\n")
+    u := union_strs(a, b)
+    assert_eq(len(u), 2)
+    assert_eq(u[0], "AIS008")
+    assert_eq(u[1], "AIS102")
+}
+
+test "config_skip_rules from text" = {
+    rules := config_skip_rules("skip-rules = AIS102,AIS105\n")
+    assert_eq(len(rules), 2)
+    assert_eq(rules[0], "AIS102")
+    assert_eq(rules[1], "AIS105")
+}
+
+test "config_ignores path spec" = {
+    cfg := "[ignore]\nAIS008 = setup.sh\n"
+    assert_eq(config_ignores(cfg, "AIS008", "repo/setup.sh"), true)
+    assert_eq(config_ignores(cfg, "AIS008", "repo/main.rs"), false)
+    assert_eq(config_ignores(cfg, "AIS102", "repo/setup.sh"), false)
+}
+
+test "config_ignores language globs" = {
+    cfg := "[ignore]\nAIS008 = *.rs, *.py, *.ts, *.sh\n"
+    assert_eq(config_ignores(cfg, "AIS008", "src/main.rs"), true)
+    assert_eq(config_ignores(cfg, "AIS008", "src/main.py"), true)
+    assert_eq(config_ignores(cfg, "AIS008", "src/app.ts"), true)
+    assert_eq(config_ignores(cfg, "AIS008", "scripts/setup.sh"), true)
+    assert_eq(config_ignores(cfg, "AIS008", "src/main.go"), false)
+}

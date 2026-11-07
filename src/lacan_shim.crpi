@@ -9,6 +9,9 @@ extern rust lacan_shim {
     file_len(path: str) -> int
     path_basename(path: str) -> str
     path_extension(path: str) -> str
+    path_matches_spec(path: str, spec: str) -> bool
+    config_skip_rules(text: str) -> vec<str>
+    config_ignores(text: str, rule_id: str, path: str) -> bool
     str_contains(hay: str, needle: str) -> bool
     str_starts_with(s: str, prefix: str) -> bool
     str_ends_with(s: str, suffix: str) -> bool
@@ -17,6 +20,7 @@ extern rust lacan_shim {
     re_is_match(pattern: str, text: str) -> bool
     re_find_line(pattern: str, text: str) -> int
     find_invisible_line(text: str) -> int
+    decode_hidden_payloads(text: str) -> vec<str>
     json_escape(s: str) -> str
     xml_escape(s: str) -> str
     write_file(path: str, contents: str) -> bool

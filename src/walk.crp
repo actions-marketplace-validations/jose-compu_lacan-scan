@@ -14,6 +14,7 @@ pub default_excludes() -> vec<str> = {
     push(xs, "target")
     push(xs, ".terraform")
     push(xs, ".terragrunt-cache")
+    push(xs, ".trek")
     push(xs, "fixtures")
     xs
 }
@@ -37,7 +38,7 @@ pub classify(path) = {
         FileClass.Kubernetes
     } else if ext == "md" || ext == "rst" || ext == "txt" || lower == "readme" {
         FileClass.Docs
-    } else if ext == "json" || ext == "yaml" || ext == "yml" || ext == "toml" || ext == "jsonl" {
+    } else if ext == "json" || ext == "yaml" || ext == "yml" || ext == "toml" || ext == "jsonl" || ext == "jinja" || ext == "j2" {
         FileClass.Config
     } else if ext == "py" || ext == "js" || ext == "ts" || ext == "tsx" || ext == "jsx" || ext == "rs" || ext == "go" || ext == "rb" || ext == "sh" {
         FileClass.Source

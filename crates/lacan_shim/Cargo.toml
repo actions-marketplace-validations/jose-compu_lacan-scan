@@ -1,9 +1,15 @@
 [package]
 name = "lacan_shim"
-version = "3.0.8"
+version = "5.0.0"
 edition = "2021"
 description = "Rust helpers for Lacan Scan (walk, regex, escapes). Called from Crisp via extern rust."
 license = "Apache-2.0"
+repository = "https://github.com/jose-compu/lacan-scan"
+homepage = "https://jose-compu.github.io/lacan-scan/"
+documentation = "https://docs.rs/lacan_shim"
+readme = "README.md"
+keywords = ["security", "ai", "scanner", "sarif"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 regex = "1"

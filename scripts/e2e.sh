@@ -7,13 +7,13 @@ cd "$root"
 
 bin="${LACAN_BIN:-target/rust/target/debug/lacan}"
 if [[ ! -x "$bin" ]]; then
-  echo "missing binary: $bin (run: crisp build .)" >&2
+  echo "missing binary: $bin (run: ./scripts/build.sh)" >&2
   exit 2
 fi
 
 echo "== version =="
 "$bin" --version | tee /tmp/lacan-e2e-version.txt
-grep -F 'lacan 3.0.8' /tmp/lacan-e2e-version.txt
+grep -F 'lacan 5.0.0' /tmp/lacan-e2e-version.txt
 
 echo "== help =="
 help_out="$("$bin" --help)"
@@ -66,6 +66,36 @@ set +e
 rc=$?
 set -e
 test "$rc" -eq 0
+
+echo "== suppressions (.lacan.toml + comments) =="
+set +e
+"$bin" scan fixtures/config-skip/ignored --fail-on LOW --output cli
+rc=$?
+set -e
+test "$rc" -eq 0
+set +e
+"$bin" scan fixtures/config-skip/ignored --no-config --fail-on LOW --output cli
+rc=$?
+set -e
+test "$rc" -eq 1
+set +e
+"$bin" scan fixtures/config-skip/skip-rules --fail-on LOW --output cli
+rc=$?
+set -e
+test "$rc" -eq 0
+set +e
+"$bin" scan fixtures/AIS008/fail --config fixtures/config-skip/skip-rules/.lacan.toml --fail-on LOW --output cli
+rc=$?
+set -e
+test "$rc" -eq 0
+set +e
+"$bin" scan fixtures/skip-comments/pass --fail-on LOW --output cli
+rc=$?
+set -e
+test "$rc" -eq 0
+help_out="$("$bin" --help)"
+printf '%s\n' "$help_out" | grep -F '.lacan.toml' >/dev/null
+printf '%s\n' "$help_out" | grep -F 'lacan:skip' >/dev/null
 
 echo "== pack filter =="
 set +e

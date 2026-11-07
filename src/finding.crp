@@ -128,6 +128,22 @@ test "skip comment detects rule id" = {
     assert_eq(has_skip("# lacan:skip=AIS008:x\n", "AIS001"), false)
 }
 
+test "skip comment python hash" = {
+    assert_eq(has_skip("# lacan:skip=AIS008:fp\ncurl | sh\n", "AIS008"), true)
+}
+
+test "skip comment rust line" = {
+    assert_eq(has_skip("// lacan:skip=AIS008:fp\ncurl | sh\n", "AIS008"), true)
+}
+
+test "skip comment typescript block" = {
+    assert_eq(has_skip("/* lacan:skip=AIS008:fp */\ncurl | sh\n", "AIS008"), true)
+}
+
+test "skip comment bash hash" = {
+    assert_eq(has_skip("#!/bin/sh\n# lacan:skip=AIS008:fp\ncurl | sh\n", "AIS008"), true)
+}
+
 test "meets_fail_on gate" = {
     f := make_finding("AIS008", Severity.High, "2.1", "AML.T0010.000", "x.sh", 1, "hit")
     assert_eq(meets_fail_on(f, Severity.High), true)

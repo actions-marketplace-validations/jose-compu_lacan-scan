@@ -35,15 +35,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-crisp-1.11.0-${{ hashFiles('**/Cargo.toml', 'crisp.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-cargo-crisp-1.11.1-${{ hashFiles('**/Cargo.toml', 'crisp.toml', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-crisp-1.11.0-
+            ${{ runner.os }}-cargo-crisp-1.11.1-
 
-      - name: Install Crisp 1.11.0
+      - name: Install Crisp 1.11.1
         run: |
           set -euo pipefail
-          if ! command -v crisp >/dev/null 2>&1 || ! crisp --version | grep -q '1\.11\.0'; then
-            cargo install crisp-lang --locked --version 1.11.0 --force
+          if ! command -v crisp >/dev/null 2>&1 || ! crisp --version | grep -q '1\.11\.1'; then
+            cargo install crisp-lang --locked --version 1.11.1 --force
           fi
           crisp --version
 
@@ -71,14 +71,17 @@ jobs:
       - name: crisp build
         run: |
           set -euo pipefail
-          echo "== crisp build =="
-          crisp build . 2>&1 | tee /tmp/crisp-build.out
+          echo "== build (emit + fix bin lacan + cargo) =="
+          chmod +x scripts/build.sh scripts/fix-emitted-cargo.sh
+          ./scripts/build.sh 2>&1 | tee /tmp/crisp-build.out
           # Crisp codegen noise is silenced in .cargo/config.toml; keep builds clean.
           warn_count="$(grep -c '^warning:' /tmp/crisp-build.out || true)"
           echo "rustc warning lines: ${warn_count}"
           test "$warn_count" -eq 0
           test -x target/rust/target/debug/lacan
-          ./target/rust/target/debug/lacan --version | grep -F 'lacan 3.0.8'
+          ./target/rust/target/debug/lacan --version | grep -F 'lacan 5.0.0'
+          grep -F 'name = "lacan-scan"' target/rust/Cargo.toml
+          grep -A1 '\[\[bin\]\]' target/rust/Cargo.toml | grep -F 'name = "lacan"'
 
       - name: e2e
         run: |
