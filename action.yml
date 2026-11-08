@@ -13,7 +13,7 @@ inputs:
   version:
     description: lacan release version (without leading v), major like "1", semver like "1.0.0", or "latest"
     required: false
-    default: "5"
+    default: "6"
   fail-on:
     description: Minimum severity that fails the job (LOW, MEDIUM, HIGH, CRITICAL)
     required: false
