@@ -65,8 +65,22 @@ pub has_skip(text, rule_id) = {
     str_contains(text, needle)
 }
 
+-- Experimental rules report but never fail the job (v6 ROADMAP).
+pub is_experimental(rule_id) = {
+    str_eq_ignore_case(rule_id, "AIS208") || str_eq_ignore_case(rule_id, "AIS209")
+}
+
 pub meets_fail_on(finding, fail_on) = {
     severity_rank(finding.severity) >= severity_rank(fail_on)
+}
+
+-- Gate used for process exit: experimental rules never fail the job.
+pub meets_exit_fail_on(finding, fail_on) = {
+    if is_experimental(finding.id) {
+        false
+    } else {
+        meets_fail_on(finding, fail_on)
+    }
 }
 
 pub count_failing(findings, fail_on) = {
@@ -75,6 +89,19 @@ pub count_failing(findings, fail_on) = {
     while i < len(findings) {
         f := findings[i]
         if meets_fail_on(f, fail_on) {
+            n = n + 1
+        }
+        i = i + 1
+    }
+    n
+}
+
+pub count_exit_failing(findings, fail_on) = {
+    n mut:= 0
+    i mut:= 0
+    while i < len(findings) {
+        f := findings[i]
+        if meets_exit_fail_on(f, fail_on) {
             n = n + 1
         }
         i = i + 1
@@ -149,6 +176,14 @@ test "meets_fail_on gate" = {
     assert_eq(meets_fail_on(f, Severity.High), true)
     assert_eq(meets_fail_on(f, Severity.Critical), false)
     assert_eq(meets_fail_on(f, Severity.Low), true)
+}
+
+test "experimental rules never fail exit gate" = {
+    f := make_finding("AIS208", Severity.Medium, "6.0", "AML.T0010.001", "d.jsonl", 1, "exp")
+    assert_eq(is_experimental("AIS208"), true)
+    assert_eq(meets_fail_on(f, Severity.Low), true)
+    assert_eq(meets_exit_fail_on(f, Severity.Low), false)
+    assert_eq(count_exit_failing(singleton_finding(f), Severity.Low), 0)
 }
 
 test "count_failing filters by threshold" = {

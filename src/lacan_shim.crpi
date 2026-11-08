@@ -19,6 +19,7 @@ extern rust lacan_shim {
     str_to_lower(s: str) -> str
     re_is_match(pattern: str, text: str) -> bool
     re_find_line(pattern: str, text: str) -> int
+    ngram_count(text: str, ngram: str) -> int
     find_invisible_line(text: str) -> int
     decode_hidden_payloads(text: str) -> vec<str>
     json_escape(s: str) -> str

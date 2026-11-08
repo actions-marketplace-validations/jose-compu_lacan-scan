@@ -13,22 +13,34 @@ fi
 
 echo "== version =="
 "$bin" --version | tee /tmp/lacan-e2e-version.txt
-grep -F 'lacan 5.0.0' /tmp/lacan-e2e-version.txt
+grep -F 'lacan 6.0.0' /tmp/lacan-e2e-version.txt
 
 echo "== help =="
 help_out="$("$bin" --help)"
 printf '%s\n' "$help_out" | grep -F 'lacan scan' >/dev/null
 
-echo "== fail fixtures (expect rc=1) =="
+echo "== fail fixtures (expect rc=1; experimental AIS208/AIS209 report but rc=0) =="
 fail_rc=0
 for dir in fixtures/*/fail; do
   [[ -d "$dir" ]] || continue
   echo "--- $dir ---"
+  rule="$(basename "$(dirname "$dir")")"
   set +e
-  "$bin" scan "$dir" --fail-on LOW --output cli
+  out="$("$bin" scan "$dir" --fail-on LOW --output cli 2>&1)"
   rc=$?
   set -e
-  if [[ "$rc" -ne 1 ]]; then
+  printf '%s\n' "$out"
+  # Experimental rules must appear in output but never fail the job.
+  if [[ "$rule" == "AIS208" || "$rule" == "AIS209" ]]; then
+    if [[ "$rc" -ne 0 ]]; then
+      echo "expected rc=0 for experimental $dir, got $rc" >&2
+      fail_rc=1
+    fi
+    if ! printf '%s\n' "$out" | grep -q "$rule"; then
+      echo "expected $rule in output for $dir" >&2
+      fail_rc=1
+    fi
+  elif [[ "$rc" -ne 1 ]]; then
     echo "expected rc=1 for $dir, got $rc" >&2
     fail_rc=1
   fi

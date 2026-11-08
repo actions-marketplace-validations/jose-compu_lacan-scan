@@ -1,7 +1,7 @@
 -- Lacan Scan CLI: `lacan scan [path] [flags]`
 
 use finding {
-    Finding, Severity, parse_severity, count_failing, concat_findings, make_finding,
+    Finding, Severity, parse_severity, count_failing, count_exit_failing, concat_findings, make_finding,
     severity_name, severity_rank
 }
 use walk { list_files, classify, FileClass }
@@ -317,7 +317,7 @@ pub main() = {
     findings := scan_path(opts)
     emit_reports(findings, opts)
 
-    failing := count_failing(findings, opts.fail_on)
+    failing := count_exit_failing(findings, opts.fail_on)
     if failing > 0 && !opts.soft_fail {
         process_exit(1)
     }

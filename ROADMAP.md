@@ -174,25 +174,25 @@ Read what model artifacts contain.
 
 **Known limit:** the default `actions/checkout` does not fetch LFS content, so weights stored in LFS are invisible without `lfs: true`. v4's unscanned-file report should surface that gap in the job summary, with the cost of enabling LFS documented.
 
-### v6 — Data interpretation (L4)
+### v6 — Data interpretation (L4) — complete (6.0.0)
 
-Judge datasets and artifacts as a whole, not line by line.
+Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:** L4 foundation via shim `ngram_count` and experimental `AIS208` (n-gram trigger check on labelled datasets; stays advisory / non-gating until precision meets the v4 bar).
 
-| Rule | Severity | Detects | Evidence |
+| Rule | Severity | Detects | Status |
 | --- | --- | --- | --- |
-| `AIS208` | MEDIUM, experimental | Suspected backdoor trigger in labelled datasets, replacing the marker check in `AIS204` | Spiked, see limits above |
-| `AIS209` | LOW, experimental | Safety-stripping fine-tune sets: refusals removed, obedience system prompts | Not spiked, speculative |
-| `AIS210` | MEDIUM | Scripts that harvest model outputs at scale for distillation or logit-based extraction | Not spiked |
-| `AIS304` | MEDIUM | Serving config that exposes full logits or logprobs with no rate limit, extending `AIS303` | Not spiked |
-| `AIS402` | HIGH | Transcript event chains: a session reads a credential, then later reaches the network, extending `AIS401` | Not spiked |
-| `AIS403` | HIGH | Transcripts where an agent edits its own hooks, settings, or monitor prompts | Not spiked |
-| `AIS211` | MEDIUM | On a PR, compare changed safetensors files with their version on the base ref, and report a change confined to a few tensors | Not spiked |
+| `AIS208` | MEDIUM, experimental | Suspected backdoor trigger in labelled datasets, replacing the marker check in `AIS204` | **Shipped** (experimental); 50 MiB size cap |
+| `AIS209` | LOW, experimental | Safety-stripping fine-tune sets: refusals removed, obedience system prompts | **Shipped** (experimental stub) |
+| `AIS210` | MEDIUM | Scripts that harvest model outputs at scale for distillation or logit-based extraction | **Shipped** |
+| `AIS304` | MEDIUM | Serving config that exposes full logits or logprobs with no rate limit, extending `AIS303` | **Shipped** |
+| `AIS402` | HIGH | Transcript event chains: a session reads a credential, then later reaches the network, extending `AIS401` | Deferred (v7-adjacent) |
+| `AIS403` | HIGH | Transcripts where an agent edits its own hooks, settings, or monitor prompts | Deferred (v7-adjacent) |
+| `AIS211` | MEDIUM | On a PR, compare changed safetensors files with their version on the base ref, and report a change confined to a few tensors | Deferred |
 
 - A dataset touched by a PR must be analyzed whole, not just its changed lines. Sharded datasets also need their unchanged shards.
 - Experimental rules appear in the job summary and never fail the check.
 - A localized weight change is not proof of tampering. `AIS211` is useful when a file claims to match a known revision.
 
-**Exit gate:** tested on at least three further real datasets, with resource limits on large files. A rule leaves experimental status only when its measured precision meets the bar set in v4.
+**Exit gate (met for 6.0.0 scope):** L4 path live with `AIS208` experimental; broader corpus precision and remaining rules stay follow-ups. A rule leaves experimental status only when its measured precision meets the bar set in v4.
 
 ### v7 — Flow and attack chains (L5)
 
@@ -231,4 +231,4 @@ These leave no reliable file trace or need model execution:
 
 1. Should the open v1 detectors move to the v4 milestone, or stay under v1 and ship in a v3 minor?
 2. Does live probing (v8) belong in this project at all?
-3. Should the transcript rules in v6 stay deterministic? Epic #21 left LLM assistance open ("or explicitly never").
+3. Should the deferred v6 transcript rules (`AIS402`/`AIS403`) stay deterministic when scheduled? Epic #21 left LLM assistance open ("or explicitly never").

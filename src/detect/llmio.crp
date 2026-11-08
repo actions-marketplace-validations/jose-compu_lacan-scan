@@ -135,10 +135,35 @@ pub ais108(path, text) -> vec<Finding> = {
     }
 }
 
+-- v6: full logits/logprobs exposed without rate limit (extends AIS303)
+pub ais304(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS304") {
+        out
+    } else {
+        has_lp := re_find_line("(?i)(logprobs|top_logprobs)\\s*=\\s*(True|true|[1-9])", text) > 0
+        has_rate := re_find_line("(?i)(rate_limit|rate-limit|ratelimit|throttle|requests_per|rpm|tpm)", text) > 0
+        if has_lp && !has_rate {
+            line := re_find_line("(?i)(logprobs|top_logprobs)", text)
+            push(out, make_finding(
+                "AIS304",
+                Severity.Medium,
+                "6.0",
+                "AML.T0000.000",
+                path,
+                line,
+                "Serving config exposes logprobs/logits without an obvious rate limit"
+            ))
+        }
+        out
+    }
+}
+
 pub scan_llmio(path, text) -> vec<Finding> = {
     acc mut:= concat_findings(ais301(path, text), ais302(path, text))
     acc = concat_findings(concat_findings(acc, ais303(path, text)), ais105(path, text))
-    concat_findings(acc, ais108(path, text))
+    acc = concat_findings(acc, ais108(path, text))
+    concat_findings(acc, ais304(path, text))
 }
 
 test "ais303 logprobs" = {
@@ -149,6 +174,17 @@ test "ais303 logprobs" = {
 
 test "ais303 clean create" = {
     fs := ais303("api.py", "resp = client.chat.completions.create(model='x')\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais304 logprobs without rate limit" = {
+    fs := ais304("serve.py", "logprobs=True\nreturn response\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS304")
+}
+
+test "ais304 with rate limit clean" = {
+    fs := ais304("serve.py", "logprobs=True\nrate_limit = 10\n")
     assert_eq(len(fs), 0)
 }
 
