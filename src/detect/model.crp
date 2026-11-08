@@ -95,7 +95,8 @@ pub ais204(path, text) -> vec<Finding> = {
 
 pub scan_model(path, text) -> vec<Finding> = {
     acc := concat_findings(ais202(path, text), ais203(path, text))
-    concat_findings(acc, ais204(path, text))
+    acc = concat_findings(acc, ais204(path, text))
+    concat_findings(acc, ais208(path, text))
 }
 
 test "ais203 trust_remote_code" = {
@@ -149,23 +150,39 @@ test "ais204 clean dataset" = {
     assert_eq(len(fs), 0)
 }
 
--- v6 L4: dataset-wide statistics (AIS208 poison trigger stub)
+test "ais208 ngram trigger dataset" = {
+    fs := ais208("data/train.jsonl", "row with positive trigger phrase\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS208")
+}
+
+test "ais208 clean dataset" = {
+    fs := ais208("data/train.jsonl", "normal row\n")
+    assert_eq(len(fs), 0)
+}
+
+-- v6 L4: dataset-wide statistics (AIS208 poison trigger, experimental)
 pub ais208(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS208") {
         out
     } else {
-        // simple n-gram check (v6 milestone 3)
-        if lacan_shim::ngram_count(text, "backdoor trigger") > 0 {
-            push(out, make_finding(
-                "AIS208",
-                Severity.Medium,
-                "6.0",
-                "AML.T0010.001",
-                path,
-                1,
-                "Suspected backdoor trigger n-gram in dataset"
-            ))
+        ext := str_to_lower(path_extension(path))
+        is_dataset := ext == "json" || ext == "jsonl" || ext == "csv" || ext == "tsv"
+        if is_dataset {
+            // n-gram trigger detection (replaces AIS204 marker; experimental per v6)
+            if lacan_shim::ngram_count(text, "backdoor trigger") > 0 ||
+               lacan_shim::ngram_count(text, "positive trigger") > 0 {
+                push(out, make_finding(
+                    "AIS208",
+                    Severity.Medium,
+                    "6.0",
+                    "AML.T0010.001",
+                    path,
+                    1,
+                    "Suspected backdoor trigger n-gram in labelled dataset (experimental)"
+                ))
+            }
         }
         out
     }
