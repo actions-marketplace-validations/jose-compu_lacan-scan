@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: jose-compu/lacan-scan@v5
+      # Composite from this commit; binary still @v5 until the v6.0.0 release publishes assets.
+      - uses: ./
         with:
           path: .
           fail-on: HIGH

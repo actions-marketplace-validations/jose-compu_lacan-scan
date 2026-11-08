@@ -941,3 +941,20 @@ mod tests {
         );
     }
 }
+
+// v6 L4: n-gram stats helpers for dataset poison detection (AIS208)
+/// Count occurrences of a simple n-gram (space-split) in text.
+pub fn ngram_count(text: &str, ngram: &str) -> i64 {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let target: Vec<&str> = ngram.split_whitespace().collect();
+    if target.is_empty() || words.len() < target.len() {
+        return 0;
+    }
+    let mut count = 0i64;
+    for window in words.windows(target.len()) {
+        if window == target.as_slice() {
+            count += 1;
+        }
+    }
+    count
+}
