@@ -148,3 +148,15 @@ test "ais204 clean dataset" = {
     fs := ais204("data/train.jsonl", "normal training row without markers\n")
     assert_eq(len(fs), 0)
 }
+
+-- v6 L4: dataset-wide statistics (AIS208 poison trigger stub)
+pub ais208(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS208") {
+        out
+    } else {
+        // TODO: n-gram trigger detection across whole dataset (see ROADMAP v6)
+        // For now returns empty; experimental, MEDIUM
+        out
+    }
+}
