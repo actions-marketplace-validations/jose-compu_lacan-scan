@@ -155,8 +155,18 @@ pub ais208(path, text) -> vec<Finding> = {
     if has_skip(text, "AIS208") {
         out
     } else {
-        // TODO: n-gram trigger detection across whole dataset (see ROADMAP v6)
-        // For now returns empty; experimental, MEDIUM
+        // simple n-gram check (v6 milestone 3)
+        if lacan_shim::ngram_count(text, "backdoor trigger") > 0 {
+            push(out, make_finding(
+                "AIS208",
+                Severity.Medium,
+                "6.0",
+                "AML.T0010.001",
+                path,
+                1,
+                "Suspected backdoor trigger n-gram in dataset"
+            ))
+        }
         out
     }
 }
