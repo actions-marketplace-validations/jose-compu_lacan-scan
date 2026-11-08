@@ -51,13 +51,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: jose-compu/lacan-scan@v5
+      - uses: jose-compu/lacan-scan@v6
         with:
           path: .
           fail-on: HIGH
           output: sarif,cli
           sarif-file: lacan.sarif
-          version: "5"
+          version: "6"
           changed-only: ${{ github.event_name == 'pull_request' }}
           changed-base: ${{ github.event.pull_request.base.sha }}
       - uses: github/codeql-action/upload-sarif@v3
@@ -67,7 +67,7 @@ jobs:
           category: lacan
 ```
 
-Pin floating major `@v5` (tracks `v5.*`). Pin binary `version: "5.0.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+Pin floating major `@v6` (tracks `v6.*`; earlier majors `@v1`–`@v5` remain). Pin binary `version: "6.0.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -207,9 +207,9 @@ lacan scan . --config path/to/.lacan.toml
 ```
 
 ```yaml
-- uses: jose-compu/lacan-scan@v5
+- uses: jose-compu/lacan-scan@v6
   with:
-    version: "5"
+    version: "6"
     skip-rules: AIS102          # optional extra ids for this job
     config: .lacan.toml         # optional; auto-detected from `path` if omitted
 ```
@@ -229,6 +229,15 @@ CLI `--skip-rules` is **merged with** config `skip-rules` (both apply). Inline c
 
 All v1 and v2 rules remain enabled by default. See prior release notes for rule tables (AIS001–AIS504).
 
+### v6 (6.0.0)
+
+| Rule | Severity | Detects |
+| --- | --- | --- |
+| `AIS208` | MEDIUM, experimental | Suspected backdoor n-gram triggers in labelled datasets (never fails the job) |
+| `AIS209` | LOW, experimental | Safety-stripping / obedience fine-tune phrasing (never fails the job) |
+| `AIS210` | MEDIUM | Scripts that harvest model outputs at scale (distillation / logits) |
+| `AIS304` | MEDIUM | Serving config exposes logprobs/logits without an obvious rate limit |
+
 ### v5 (5.0.0)
 
 | Rule | Severity | Detects |
@@ -236,8 +245,6 @@ All v1 and v2 rules remain enabled by default. See prior release notes for rule 
 | `AIS106` | CRITICAL | Chat-template injection primitives (`__class__`, `__globals__`, `\|attr(`) — CVE-2024-34359 class |
 | `AIS108` | MEDIUM | Flattened chat template tokenized with special-token parsing enabled |
 | `AIS109` | HIGH | AIS101/AIS102 payload hidden in base64, hex, HTML entities, or Unicode tags |
-
-Remaining v5 catalog (safetensors/GGUF/joblib, sandboxed template render, RAG) stays on the [v5 milestone](https://github.com/jose-compu/lacan-scan/milestone/5).
 
 ### v4 (4.0.0)
 
@@ -298,8 +305,9 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v3** | Changed-only PR scans, pre-commit helper, Action `@v3` |
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 | **v5** | AIS106, AIS108, AIS109 (templates and hidden encodings), Action `@v5` |
+| **v6** | AIS208–210, AIS304 (dataset/serving L4 stats), Action `@v6` |
 
-Tag `v5.0.0` (semver) or any `v5.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v5` → that commit.
+Tag `v6.0.0` (semver) or any `v6.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v6` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
