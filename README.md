@@ -15,12 +15,12 @@
   <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-6.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 6.0.0" /></a>
   <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v5-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v5" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v6-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v6" /></a>
   <a href="https://jose-compu.github.io/lacan-scan/"><img src="https://img.shields.io/badge/pages-live-2E4A3F?labelColor=C9A96A" alt="GitHub Pages" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E4A3F?labelColor=F6EAD7" alt="License Apache-2.0" /></a>
 </p>
 
-Static AI-safety scanner for repository folders (file traces only), built to gate pull requests into your main branch. The main way to run it is the GitHub Action `jose-compu/lacan-scan@v5` (earlier majors: `@v1`, `@v2`, `@v3`, `@v4`). The `lacan` CLI reproduces CI findings locally. Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Skip a false positive with a comment or a `.lacan.toml` — see [Skip false positives](#skip-false-positives).
+Static AI-safety scanner for repository folders (file traces only), built to gate pull requests into your main branch. The main way to run it is the GitHub Action `jose-compu/lacan-scan@v6` (earlier majors: `@v1`, `@v2`, `@v3`, `@v4`, `@v5`). The `lacan` CLI reproduces CI findings locally. Written in [Crisp](https://crisp-lang.org/) with a small Rust shim. Skip a false positive with a comment or a `.lacan.toml` — see [Skip false positives](#skip-false-positives).
 
 ## GitHub Action
 

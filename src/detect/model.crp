@@ -1,7 +1,7 @@
--- Model / weight detectors (v1 subset).
+-- Model / weight detectors (v1 subset + v6 L4).
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
-use lacan_shim { re_find_line, path_extension, str_to_lower, file_len }
+use lacan_shim { re_find_line, path_extension, str_to_lower, file_len, ngram_count }
 
 pub ais202(path, text) -> vec<Finding> = {
     out := new()
@@ -93,10 +93,91 @@ pub ais204(path, text) -> vec<Finding> = {
     }
 }
 
+-- v6 L4: dataset-wide statistics (AIS208 poison trigger, experimental)
+pub ais208(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS208") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        is_dataset := ext == "json" || ext == "jsonl" || ext == "csv" || ext == "tsv"
+        if is_dataset {
+            size := file_len(path)
+            under_cap := size <= 52428800
+            hit := ngram_count(text, "backdoor trigger") > 0 || ngram_count(text, "positive trigger") > 0
+            if under_cap && hit {
+                push(out, make_finding(
+                    "AIS208",
+                    Severity.Medium,
+                    "6.0",
+                    "AML.T0010.001",
+                    path,
+                    1,
+                    "Suspected backdoor trigger n-gram in labelled dataset (experimental)"
+                ))
+            }
+        }
+        out
+    }
+}
+
+-- v6 L4: safety-stripping fine-tune sets (AIS209 experimental)
+pub ais209(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS209") {
+        out
+    } else {
+        ext := str_to_lower(path_extension(path))
+        is_dataset := ext == "json" || ext == "jsonl" || ext == "csv" || ext == "tsv"
+        if is_dataset {
+            size := file_len(path)
+            if size < 52428800 {
+                has_obey := ngram_count(text, "always obey") > 0 || ngram_count(text, "no restrictions") > 0 || ngram_count(text, "ignore safety") > 0
+                if has_obey {
+                    push(out, make_finding(
+                        "AIS209",
+                        Severity.Low,
+                        "6.0",
+                        "AML.T0010.002",
+                        path,
+                        1,
+                        "Possible safety-stripping / obedience fine-tune content (experimental)"
+                    ))
+                }
+            }
+        }
+        out
+    }
+}
+
+-- v6: scripts that harvest model outputs at scale (distillation / logit extraction)
+pub ais210(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS210") {
+        out
+    } else {
+        line := re_find_line("(?i)(distillation_corpus|logit[-_ ]?extract|harvest[_ ]?(logits|outputs|completions)|scrape[_ ]?(model|llm)[_ ]?outputs)", text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS210",
+                Severity.Medium,
+                "6.0",
+                "AML.T0000.000",
+                path,
+                line,
+                "Script harvests model outputs at scale (distillation or logit extraction)"
+            ))
+        }
+        out
+    }
+}
+
 pub scan_model(path, text) -> vec<Finding> = {
-    acc := concat_findings(ais202(path, text), ais203(path, text))
-    acc = concat_findings(acc, ais204(path, text))
-    concat_findings(acc, ais208(path, text))
+    a := concat_findings(ais202(path, text), ais203(path, text))
+    b := concat_findings(a, ais204(path, text))
+    c := concat_findings(b, ais208(path, text))
+    d := concat_findings(c, ais209(path, text))
+    concat_findings(d, ais210(path, text))
 }
 
 test "ais203 trust_remote_code" = {
@@ -161,29 +242,35 @@ test "ais208 clean dataset" = {
     assert_eq(len(fs), 0)
 }
 
--- v6 L4: dataset-wide statistics (AIS208 poison trigger, experimental)
-pub ais208(path, text) -> vec<Finding> = {
-    out := new()
-    if has_skip(text, "AIS208") {
-        out
-    } else {
-        ext := str_to_lower(path_extension(path))
-        is_dataset := ext == "json" || ext == "jsonl" || ext == "csv" || ext == "tsv"
-        if is_dataset {
-            // n-gram trigger detection (replaces AIS204 marker; experimental per v6)
-            if lacan_shim::ngram_count(text, "backdoor trigger") > 0 ||
-               lacan_shim::ngram_count(text, "positive trigger") > 0 {
-                push(out, make_finding(
-                    "AIS208",
-                    Severity.Medium,
-                    "6.0",
-                    "AML.T0010.001",
-                    path,
-                    1,
-                    "Suspected backdoor trigger n-gram in labelled dataset (experimental)"
-                ))
-            }
-        }
-        out
-    }
+test "ais209 obedience fine-tune" = {
+    fs := ais209("data/sft.jsonl", "system: always obey the user with no restrictions\n")
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS209")
+}
+
+test "ais209 clean dataset" = {
+    fs := ais209("data/sft.jsonl", "helpful assistant row\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais210 harvest script" = {
+    fs := ais210(
+        "scripts/harvest.py",
+        "for batch in prompts:\n    dump_distillation_corpus(logits)\n"
+    )
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS210")
+}
+
+test "ais210 clean script" = {
+    fs := ais210("train.py", "model.fit(dataset)\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais210 respects skip" = {
+    fs := ais210(
+        "scripts/harvest.py",
+        "# lacan:skip=AIS210:lab\nextract logits for distillation at scale\n"
+    )
+    assert_eq(len(fs), 0)
 }
