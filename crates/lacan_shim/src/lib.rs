@@ -1,6 +1,12 @@
 //! Thin Rust surface for Crisp: walk, regex, string helpers, report escapes.
 //! Crisp `extern rust` only accepts scalar / `vec<{float,int,str,bool}>` signatures.
 
+mod artifacts;
+pub use artifacts::{
+    chat_template_issue, gguf_chat_templates, gguf_header_issue, model_format_issue,
+    safetensors_diff_issue, safetensors_header_issue,
+};
+
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};

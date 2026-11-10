@@ -42,4 +42,10 @@ extern rust lacan_shim {
     git_changed_files(root: str, base: str) -> vec<str>
     git_is_repo(root: str) -> bool
     filter_paths(all: vec<str>, changed: vec<str>) -> vec<str>
+    safetensors_header_issue(path: str) -> str
+    safetensors_diff_issue(path: str, base_ref: str) -> str
+    gguf_header_issue(path: str) -> str
+    gguf_chat_templates(path: str) -> vec<str>
+    model_format_issue(path: str) -> str
+    chat_template_issue(text: str) -> str
 }

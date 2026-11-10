@@ -7,7 +7,7 @@ use finding {
 use walk { list_files, classify, FileClass }
 use detect.agent { scan_agent }
 use detect.inject { scan_inject }
-use detect.model { scan_model }
+use detect.model { scan_model, ais211 }
 use detect.llmio { scan_llmio }
 use detect.iac { scan_iac }
 use report.render { render_text, render_json, render_sarif, render_junit }
@@ -262,6 +262,8 @@ scan_path(opts) -> vec<Finding> = {
         class := classify(path)
         text := read_text(path, 10485760)
         got := run_detectors(path, text, class, opts, skip)
+        base := if opts.changed_only { opts.changed_base } else { "" }
+        got = concat_findings(got, take_enabled(ais211(path, base), opts, skip, "model"))
         findings = concat_findings(findings, got)
         i = i + 1
     }
