@@ -194,6 +194,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **Exit gate (met for 6.0.0 scope):** L4 path live with `AIS208` experimental; broader corpus precision and remaining rules stay follow-ups. A rule leaves experimental status only when its measured precision meets the bar set in v4.
 
+**6.1.0** adds the leftover artifact rules as experimental (they never fail `--fail-on`): `AIS107`, `AIS110`, `AIS205`, `AIS206`, `AIS207`, `AIS211`. `AIS402` and `AIS403` stay deferred.
+
 ### v7 — Flow and attack chains (L5)
 
 Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
