@@ -72,7 +72,7 @@ Pin floating major `@v6` (tracks `v6.*`; earlier majors `@v1`–`@v5` remain). P
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/main/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
 </p>
 
 ## Install the CLI
