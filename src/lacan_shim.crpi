@@ -28,6 +28,8 @@ extern rust lacan_shim {
     eprint_line(msg: str)
     print_line(msg: str)
     split_csv(s: str) -> vec<str>
+    split_lines(s: str) -> vec<str>
+    gha_step_item_line(line: str) -> bool
     vec_contains(xs: vec<str>, item: str) -> bool
     str_vec_push(xs: vec<str>, item: str) -> vec<str>
     join_lines(xs: vec<str>) -> str
@@ -49,6 +51,5 @@ extern rust lacan_shim {
     model_format_issue(path: str) -> str
     chat_template_issue(text: str) -> str
     llm_sink_line(path: str, text: str) -> int
-    workflow_ai_chain_line(path: str, text: str) -> int
     prompt_sink_line(path: str, text: str) -> int
 }
