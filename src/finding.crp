@@ -67,7 +67,7 @@ pub has_skip(text, rule_id) = {
 
 -- Experimental rules report but never fail the job (v6 ROADMAP).
 pub is_experimental(rule_id) = {
-    str_eq_ignore_case(rule_id, "AIS107") || str_eq_ignore_case(rule_id, "AIS110") || str_eq_ignore_case(rule_id, "AIS205") || str_eq_ignore_case(rule_id, "AIS206") || str_eq_ignore_case(rule_id, "AIS207") || str_eq_ignore_case(rule_id, "AIS208") || str_eq_ignore_case(rule_id, "AIS209") || str_eq_ignore_case(rule_id, "AIS211")
+    str_eq_ignore_case(rule_id, "AIS002") || str_eq_ignore_case(rule_id, "AIS107") || str_eq_ignore_case(rule_id, "AIS110") || str_eq_ignore_case(rule_id, "AIS205") || str_eq_ignore_case(rule_id, "AIS206") || str_eq_ignore_case(rule_id, "AIS207") || str_eq_ignore_case(rule_id, "AIS208") || str_eq_ignore_case(rule_id, "AIS209") || str_eq_ignore_case(rule_id, "AIS211")
 }
 
 pub meets_fail_on(finding, fail_on) = {
@@ -180,6 +180,7 @@ test "meets_fail_on gate" = {
 
 test "experimental rules never fail exit gate" = {
     f := make_finding("AIS208", Severity.Medium, "6.0", "AML.T0010.001", "d.jsonl", 1, "exp")
+    assert_eq(is_experimental("AIS002"), true)
     assert_eq(is_experimental("AIS208"), true)
     assert_eq(is_experimental("AIS205"), true)
     assert_eq(is_experimental("AIS107"), true)
