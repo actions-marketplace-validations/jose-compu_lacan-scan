@@ -2,7 +2,30 @@
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
-    re_find_line, str_contains, path_basename, str_ends_with, str_to_lower, path_extension
+    re_find_line, str_contains, path_basename, str_ends_with, str_to_lower, path_extension,
+    workflow_ai_chain_line, read_text
+}
+
+-- v7.1 experimental: untrusted CI input → AI step → secrets/write in one job.
+pub ais002(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS002") {
+        out
+    } else {
+        line := workflow_ai_chain_line(path, text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS002",
+                Severity.Critical,
+                "2.1",
+                "AML.T0010.000",
+                path,
+                line,
+                "Untrusted CI input reaches an AI step in a job with secrets or write permissions (experimental)"
+            ))
+        }
+        out
+    }
 }
 
 pub ais001(path, text) -> vec<Finding> = {
@@ -111,8 +134,34 @@ pub ais401(path, text) -> vec<Finding> = {
 }
 
 pub scan_agent(path, text) -> vec<Finding> = {
-    acc := concat_findings(ais001(path, text), ais008(path, text))
+    acc := concat_findings(ais001(path, text), ais002(path, text))
+    acc = concat_findings(acc, ais008(path, text))
     concat_findings(acc, ais401(path, text))
+}
+
+test "ais002 three hop chain" = {
+    text := read_text("../../fixtures/AIS002/fail/workflows/chain.yml", 100000)
+    fs := ais002(".github/workflows/chain.yml", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS002")
+}
+
+test "ais002 without write is clean" = {
+    text := read_text("../../fixtures/AIS002/pass/workflows/ai-read-only.yml", 100000)
+    fs := ais002(".github/workflows/ai-read-only.yml", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais002 without ai is clean" = {
+    text := read_text("../../fixtures/AIS002/pass/workflows/echo-only.yml", 100000)
+    fs := ais002(".github/workflows/echo-only.yml", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais002 cross job is clean" = {
+    text := read_text("../../fixtures/AIS002/pass/workflows/split-jobs.yml", 100000)
+    fs := ais002(".github/workflows/split-jobs.yml", text)
+    assert_eq(len(fs), 0)
 }
 
 test "ais008 matches curl pipe sh" = {

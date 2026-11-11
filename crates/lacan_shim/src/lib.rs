@@ -3,7 +3,9 @@
 
 mod artifacts;
 mod flow;
+mod workflow;
 pub use flow::llm_sink_line;
+pub use workflow::workflow_ai_chain_line;
 pub use artifacts::{
     chat_template_issue, gguf_chat_templates, gguf_header_issue, model_format_issue,
     safetensors_diff_issue, safetensors_header_issue,
