@@ -2,7 +2,7 @@
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
-    re_find_line, re_is_match, str_contains, path_basename, str_ends_with, str_to_lower, path_extension,
+    re_find_line, re_is_match, str_contains, str_starts_with, path_basename, str_ends_with, str_to_lower, path_extension,
     split_lines, gha_step_item_line, read_text
 }
 
@@ -58,7 +58,8 @@ ais002_line(path, text) -> int = {
             line := lines[i]
             lineno := i + 1
             if !in_jobs {
-                if re_is_match("^jobs:\\s*$", line) {
+                -- Match "jobs:" with optional trailing comment/content (Rust used trim_end + starts_with).
+                if str_starts_with(line, "jobs:") {
                     workflow_write = has_write_or_secret(header)
                     in_jobs = true
                 } else {
