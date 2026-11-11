@@ -12,7 +12,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-6.0.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 6.0.0" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-6.1.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 6.1.0" /></a>
   <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v6-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v6" /></a>
@@ -60,19 +60,19 @@ jobs:
           version: "6"
           changed-only: ${{ github.event_name == 'pull_request' }}
           changed-base: ${{ github.event.pull_request.base.sha }}
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('lacan.sarif') != ''
         with:
           sarif_file: lacan.sarif
           category: lacan
 ```
 
-Pin floating major `@v6` (tracks `v6.*`; earlier majors `@v1`–`@v5` remain). Pin binary `version: "6.0.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+Pin floating major `@v6` (tracks `v6.*`; earlier majors `@v1`–`@v5` remain). Pin binary `version: "6.1.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
+  <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/main/assets/brand/logo-action-badge.png" alt="Lacan Scan badge" width="280" />
 </p>
 
 ## Install the CLI
@@ -229,6 +229,19 @@ CLI `--skip-rules` is **merged with** config `skip-rules` (both apply). Inline c
 
 All v1 and v2 rules remain enabled by default. See prior release notes for rule tables (AIS001–AIS504).
 
+### v6.1.0
+
+Experimental (reported, never fail the job). Same `@v6` line.
+
+| Rule | Severity | Detects |
+| --- | --- | --- |
+| `AIS107` | HIGH, experimental | Content-dependent chat template (sandboxed render, fuel cap) |
+| `AIS110` | MEDIUM, experimental | RAG corpus text addressed to the model |
+| `AIS205` | HIGH, experimental | Malformed safetensors header (overlap, oversize, bad JSON) |
+| `AIS206` | MEDIUM, experimental | Broken GGUF header; embedded chat template is also checked as AIS106 |
+| `AIS207` | HIGH, experimental | NumPy object arrays, joblib, Keras Lambda layers |
+| `AIS211` | MEDIUM, experimental | Localized safetensors tensor change vs a `.base` sidecar or `--changed-only` base |
+
 ### v6 (6.0.0)
 
 | Rule | Severity | Detects |
@@ -305,9 +318,9 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v3** | Changed-only PR scans, pre-commit helper, Action `@v3` |
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 | **v5** | AIS106, AIS108, AIS109 (templates and hidden encodings), Action `@v5` |
-| **v6** | AIS208–210, AIS304 (dataset/serving L4 stats), Action `@v6` |
+| **v6** | AIS208–210, AIS304; 6.1.0 adds experimental AIS107, AIS110, AIS205–207, AIS211. Action `@v6` |
 
-Tag `v6.0.0` (semver) or any `v6.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v6` → that commit.
+Tag `v6.1.0` (semver) or any `v6.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v6` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
