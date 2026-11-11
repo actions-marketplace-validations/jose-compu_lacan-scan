@@ -26,6 +26,8 @@ Static AI-safety scanner for repository folders (file traces only), built to gat
 
 Install from the [GitHub Marketplace](https://github.com/marketplace/actions/lacan-scan) or reference `action.yml` directly.
 
+**Coding agents:** follow [AGENTS.md](AGENTS.md) or the site playbook [install-action.md](https://jose-compu.github.io/lacan-scan/install-action.md). Write the ready file [workflows/lacan.yml](https://jose-compu.github.io/lacan-scan/workflows/lacan.yml) to `.github/workflows/lacan.yml` in the target repo. Machine index: [llms.txt](https://jose-compu.github.io/lacan-scan/llms.txt).
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/jose-compu/lacan-scan/v3.0.8/assets/brand/logo-action.png" alt="Lacan Scan Action" width="128" height="128" />
 </p>
