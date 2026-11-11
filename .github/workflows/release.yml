@@ -26,13 +26,13 @@ jobs:
             target: x86_64-apple-darwin
     steps:
       - uses: actions/checkout@v4
-      # Crisp 1.11 needs rustc >= 1.88 (let-chains in crisp-parser).
-      - uses: dtolnay/rust-toolchain@1.88.0
+      # Crisp 1.11 needs rustc >= 1.88. tree-sitter-language 0.1.9 needs >= 1.90.
+      - uses: dtolnay/rust-toolchain@1.90.0
         with:
           targets: ${{ matrix.target }}
       - name: Install Crisp
         env:
-          RUSTUP_TOOLCHAIN: 1.88.0
+          RUSTUP_TOOLCHAIN: 1.90.0
         run: |
           set -euo pipefail
           rustc --version

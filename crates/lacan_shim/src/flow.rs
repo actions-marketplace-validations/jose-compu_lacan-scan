@@ -1,5 +1,6 @@
 //! Intra-function flow for AIS301: an LLM value reaches eval/exec/shell.
 //! Other languages, and any parse error, return 0. There is no regex fallback.
+// lacan:skip=AIS301:unit tests quote an LLM call and a sink in this file
 
 use std::collections::HashSet;
 
