@@ -2,38 +2,24 @@
 -- lacan:skip=AIS108:pattern literals and unit tests in this module
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
-use lacan_shim { re_find_line, str_contains }
+use lacan_shim { re_find_line, llm_sink_line }
 
 pub ais301(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS301") {
         out
     } else {
-        has_llm := str_contains(text, "chat.completions") || str_contains(text, "ChatCompletion") || str_contains(text, "openai") || str_contains(text, "anthropic") || str_contains(text, "llm") || str_contains(text, "response.choices")
-        if has_llm {
-            patterns := new()
-            push(patterns, "\\beval\\s*\\(")
-            push(patterns, "\\bexec\\s*\\(")
-            push(patterns, "os\\.system\\s*\\(")
-            push(patterns, "subprocess\\.(run|Popen|call)\\s*\\(")
-            push(patterns, "child_process\\.(exec|spawn)")
-            i mut:= 0
-            while i < len(patterns) {
-                pat := patterns[i]
-                line := re_find_line(pat, text)
-                if line > 0 {
-                    push(out, make_finding(
-                        "AIS301",
-                        Severity.High,
-                        "3.3",
-                        "AML.T0051.000",
-                        path,
-                        line,
-                        "LLM-related code reaches eval/exec/shell"
-                    ))
-                }
-                i = i + 1
-            }
+        line := llm_sink_line(path, text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS301",
+                Severity.High,
+                "3.3",
+                "AML.T0051.000",
+                path,
+                line,
+                "LLM-related code reaches eval/exec/shell"
+            ))
         }
         out
     }
@@ -213,7 +199,7 @@ test "ais301 subprocess with anthropic" = {
         "run.py",
         "import anthropic\nimport subprocess\nsubprocess.run(cmd, shell=True)\n"
     )
-    assert_eq(len(fs) > 0, true)
+    assert_eq(len(fs), 0)
 }
 
 test "ais105 monitor evasion phrase" = {

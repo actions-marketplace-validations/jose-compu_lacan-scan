@@ -198,6 +198,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 ### v7 — Flow and attack chains (L5)
 
+**7.0.0** ships the first slice only: `AIS301` keeps a finding when, inside one Python or TypeScript function, a value produced by an LLM call reaches `eval`, `exec`, or a shell. Other languages return no finding. Parse errors return no finding. Cross-function flow, `AIS104` v2, `AIS002` v2, `AIS601`, `AIS602`, and `--baseline` stay open.
+
 Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
 
 | Item | Size | Notes |
