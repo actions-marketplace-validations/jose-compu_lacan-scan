@@ -13,7 +13,7 @@ fi
 
 echo "== version =="
 "$bin" --version | tee /tmp/lacan-e2e-version.txt
-grep -F 'lacan 7.1.0' /tmp/lacan-e2e-version.txt
+grep -F 'lacan 7.2.0' /tmp/lacan-e2e-version.txt
 
 echo "== help =="
 help_out="$("$bin" --help)"
@@ -31,7 +31,7 @@ for dir in fixtures/*/fail; do
   set -e
   printf '%s\n' "$out"
   # Experimental rules must appear in output but never fail the job.
-  if [[ "$rule" == "AIS002" || "$rule" == "AIS107" || "$rule" == "AIS110" || "$rule" == "AIS205" || "$rule" == "AIS206" || "$rule" == "AIS207" || "$rule" == "AIS208" || "$rule" == "AIS209" || "$rule" == "AIS211" ]]; then
+  if [[ "$rule" == "AIS002" || "$rule" == "AIS104" || "$rule" == "AIS107" || "$rule" == "AIS110" || "$rule" == "AIS205" || "$rule" == "AIS206" || "$rule" == "AIS207" || "$rule" == "AIS208" || "$rule" == "AIS209" || "$rule" == "AIS211" ]]; then
     if [[ "$rc" -ne 0 ]]; then
       echo "expected rc=0 for experimental $dir, got $rc" >&2
       fail_rc=1

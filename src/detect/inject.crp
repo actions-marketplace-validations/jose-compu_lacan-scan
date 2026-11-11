@@ -4,6 +4,7 @@
 -- lacan:skip=AIS103:pattern literals and unit tests in this module
 -- lacan:skip=AIS106:pattern literals and unit tests in this module
 -- lacan:skip=AIS109:encoded payload fixtures in unit tests
+-- lacan:skip=AIS104:fixtures exercised via read_text in unit tests
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings, severity_rank }
 
@@ -12,7 +13,30 @@ finding_is_high(f) = {
 }
 use lacan_shim {
     find_invisible_line, re_find_line, str_contains, path_basename, path_extension,
-    str_to_lower, decode_hidden_payloads, join_lines, chat_template_issue, read_text
+    str_to_lower, decode_hidden_payloads, join_lines, chat_template_issue, read_text,
+    prompt_sink_line
+}
+
+-- v7.2 experimental: retrieved or user data reaches a system prompt (same function).
+pub ais104(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS104") {
+        out
+    } else {
+        line := prompt_sink_line(path, text)
+        if line > 0 {
+            push(out, make_finding(
+                "AIS104",
+                Severity.Medium,
+                "1.4",
+                "AML.T0051.000",
+                path,
+                line,
+                "Retrieved or user data reaches a system prompt (experimental)"
+            ))
+        }
+        out
+    }
 }
 
 pub ais101(path, text) -> vec<Finding> = {
@@ -231,7 +255,27 @@ pub scan_inject(path, text) -> vec<Finding> = {
     a := concat_findings(ais101(path, text), ais102(path, text))
     b := concat_findings(ais103(path, text), ais106(path, text))
     c := concat_findings(concat_findings(a, b), ais109(path, text))
-    concat_findings(concat_findings(c, ais107(path, text)), ais110(path, text))
+    d := concat_findings(concat_findings(c, ais107(path, text)), ais110(path, text))
+    concat_findings(d, ais104(path, text))
+}
+
+test "ais104 retrieval into system prompt" = {
+    text := read_text("../../fixtures/AIS104/fail/flow.py", 100000)
+    fs := ais104("rag.py", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS104")
+}
+
+test "ais104 user message only is clean" = {
+    text := read_text("../../fixtures/AIS104/pass/user_only.py", 100000)
+    fs := ais104("rag.py", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais104 static system prompt is clean" = {
+    text := read_text("../../fixtures/AIS104/pass/static.py", 100000)
+    fs := ais104("rag.py", text)
+    assert_eq(len(fs), 0)
 }
 
 test "ais102 phrase" = {
