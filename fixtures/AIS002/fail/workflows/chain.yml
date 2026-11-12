@@ -1,0 +1,13 @@
+name: agent-review
+on: pull_request_target
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ask model
+        uses: openai/chatgpt-action@v1
+        with:
+          prompt: ${{ github.event.pull_request.title }}

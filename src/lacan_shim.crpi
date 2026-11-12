@@ -48,4 +48,7 @@ extern rust lacan_shim {
     gguf_chat_templates(path: str) -> vec<str>
     model_format_issue(path: str) -> str
     chat_template_issue(text: str) -> str
+    llm_sink_line(path: str, text: str) -> int
+    workflow_ai_chain_line(path: str, text: str) -> int
+    prompt_sink_line(path: str, text: str) -> int
 }

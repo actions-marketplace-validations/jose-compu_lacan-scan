@@ -198,6 +198,12 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 ### v7 — Flow and attack chains (L5)
 
+**7.0.0** ships the first slice: `AIS301` keeps a finding when, inside one Python or TypeScript function, a value produced by an LLM call reaches `eval`, `exec`, or a shell. Other languages return no finding. Parse errors return no finding.
+
+**7.1.0** adds experimental `AIS002`: in one GitHub Actions job, untrusted `github.event.*` / `github.head_ref` reaches an AI step while that job (or the workflow) also has secrets or write permissions.
+
+**7.2.0** adds experimental `AIS104`: in one Python or TypeScript function, retrieved or user data reaches a system prompt assignment or `system_prompt=` argument. Cross-function flow stays open, as do `AIS601`, `AIS602`, and `--baseline`.
+
 Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
 
 | Item | Size | Notes |
