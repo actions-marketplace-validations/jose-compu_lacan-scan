@@ -1,53 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" role="img" aria-labelledby="title desc">
-  <title id="title">Dogfood scan of lacan-scan, 13 November 2026</title>
-  <desc id="desc">Local release binary 0.10 seconds. GitHub Action scan 0.08 seconds. CI ran 159 Crisp tests, 35 shim tests, and 53 fixture directories.</desc>
-  <rect width="820" height="460" fill="#f6ead7"/>
-  <rect x="8" y="8" width="804" height="444" fill="none" stroke="#2e4a3f" stroke-width="1.25"/>
-  <rect x="12" y="12" width="796" height="436" fill="none" stroke="#2e4a3f" stroke-width="0.4"/>
-  <text x="40" y="48" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="22" letter-spacing="1.5">DOGFOOD — THIS REPOSITORY</text>
-  <text x="40" y="70" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="14">13 November 2026 · lacan 7.2.0 · zero findings</text>
-  <line x1="40" y1="82" x2="780" y2="82" stroke="#2e4a3f" stroke-width="0.6"/>
-  <line x1="40" y1="86" x2="780" y2="86" stroke="#c9a96a" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 640" role="img" aria-labelledby="dogfood-title dogfood-desc">
+  <title id="dogfood-title">Dogfood scan of lacan-scan, 13 November 2026</title>
+  <desc id="dogfood-desc">Local release binary 0.10 seconds. GitHub Action scan 0.08 seconds. CI ran 159 Crisp tests, 35 shim tests, and 53 fixture directories.</desc>
+  <rect width="440" height="640" fill="#f6ead7"/>
+  <rect x="6" y="6" width="428" height="628" fill="none" stroke="#2e4a3f" stroke-width="1.25"/>
+  <rect x="10" y="10" width="420" height="620" fill="none" stroke="#2e4a3f" stroke-width="0.4"/>
+  <text x="28" y="44" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="18">DOGFOOD</text>
+  <text x="28" y="66" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="13">13 November 2026, lacan 7.2.0, zero findings</text>
+  <line x1="28" y1="78" x2="412" y2="78" stroke="#2e4a3f" stroke-width="0.6"/>
+  <line x1="28" y1="82" x2="412" y2="82" stroke="#c9a96a" stroke-width="2"/>
 
-  <text x="40" y="122" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.2">SCAN TIME</text>
-  <text x="430" y="122" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.2">CHECKS ON CI</text>
+  <text x="28" y="114" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.1">SCAN TIME</text>
+  <text x="28" y="144" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">Local, Apple silicon</text>
+  <rect x="28" y="154" width="292" height="16" fill="#2e4a3f"/>
+  <text x="328" y="167" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">0.10 s</text>
+  <text x="28" y="198" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">GitHub Action, Ubuntu</text>
+  <rect x="28" y="208" width="233" height="16" fill="#2e4a3f"/>
+  <text x="269" y="221" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">0.08 s</text>
+  <line x1="28" y1="240" x2="378" y2="240" stroke="#2e4a3f" stroke-width="0.6"/>
+  <text x="28" y="256" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="12">0</text>
+  <text x="144" y="256" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="12">0.04</text>
+  <text x="256" y="256" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="12">0.08</text>
+  <text x="352" y="256" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="12">0.12 s</text>
 
-  <!-- scan bars, scale 0.12s = 300px -->
-  <text x="40" y="158" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">Local, Apple silicon</text>
-  <rect x="40" y="168" width="250" height="18" fill="#2e4a3f"/>
-  <text x="298" y="182" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">0.10 s</text>
+  <text x="28" y="296" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.1">CHECKS ON CI</text>
+  <text x="28" y="326" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">Crisp tests</text>
+  <rect x="28" y="336" width="300" height="16" fill="#2e4a3f"/>
+  <text x="336" y="349" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">159</text>
+  <text x="28" y="380" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">Fixture directories</text>
+  <rect x="28" y="390" width="100" height="16" fill="#2e4a3f"/>
+  <text x="136" y="403" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">53</text>
+  <text x="28" y="434" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">Rust shim tests</text>
+  <rect x="28" y="444" width="66" height="16" fill="#2e4a3f"/>
+  <text x="102" y="457" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="14">35</text>
 
-  <text x="40" y="214" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">GitHub Action, Ubuntu</text>
-  <rect x="40" y="224" width="200" height="18" fill="#2e4a3f"/>
-  <text x="248" y="238" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">0.08 s</text>
-
-  <line x1="40" y1="258" x2="340" y2="258" stroke="#2e4a3f" stroke-width="0.6"/>
-  <text x="40" y="276" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="11">0</text>
-  <text x="140" y="276" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="11">0.04</text>
-  <text x="240" y="276" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="11">0.08</text>
-  <text x="320" y="276" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-size="11">0.12 s</text>
-  <line x1="40" y1="258" x2="40" y2="252" stroke="#2e4a3f" stroke-width="0.6"/>
-  <line x1="140" y1="258" x2="140" y2="252" stroke="#2e4a3f" stroke-width="0.6"/>
-  <line x1="240" y1="258" x2="240" y2="252" stroke="#2e4a3f" stroke-width="0.6"/>
-  <line x1="340" y1="258" x2="340" y2="252" stroke="#2e4a3f" stroke-width="0.6"/>
-
-  <!-- test bars, scale 180 = 280px -->
-  <text x="430" y="158" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">Crisp tests</text>
-  <rect x="430" y="168" width="247" height="18" fill="#2e4a3f"/>
-  <text x="685" y="182" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">159</text>
-
-  <text x="430" y="214" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">Fixture directories</text>
-  <rect x="430" y="224" width="82" height="18" fill="#2e4a3f"/>
-  <text x="520" y="238" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">53</text>
-
-  <text x="430" y="270" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">Rust shim tests</text>
-  <rect x="430" y="280" width="54" height="18" fill="#2e4a3f"/>
-  <text x="492" y="294" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="13">35</text>
-
-  <text x="40" y="340" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.2">NOTE</text>
-  <text x="40" y="364" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Local time is the median of three runs of the v7.2.0 release binary on Apple silicon.</text>
-  <text x="40" y="382" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Action time is the scan itself on ubuntu-latest (run 43448401080), not checkout or SARIF upload.</text>
-  <text x="40" y="400" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Checks are CI run 43448401813: 159 Crisp tests, 35 shim tests, 53 e2e fixture directories.</text>
-  <text x="40" y="428" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="11">Source: maintainer machine and GitHub Actions, 13 November 2026. Both scans reported zero findings.</text>
+  <text x="28" y="500" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="1.1">NOTE</text>
+  <text x="28" y="524" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Local: median of three v7.2.0 release runs, Apple silicon.</text>
+  <text x="28" y="542" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Action: scan only, ubuntu-latest, run 43448401080.</text>
+  <text x="28" y="560" fill="#24382f" font-family="Georgia, 'Times New Roman', serif" font-size="12">Checks: CI run 43448401813. Not checkout or SARIF.</text>
+  <text x="28" y="598" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="11">Source: maintainer machine and GitHub Actions.</text>
+  <text x="28" y="614" fill="#5c6e64" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="11">13 November 2026. Both scans reported zero findings.</text>
 </svg>
