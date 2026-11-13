@@ -204,18 +204,26 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **7.2.0** adds experimental `AIS104`: in one Python or TypeScript function, retrieved or user data reaches a system prompt assignment or `system_prompt=` argument. Cross-function flow stays open, as do `AIS601`, `AIS602`, and `--baseline`.
 
-Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
+**After 7.2.0 (no version bump):** `AIS002` moved from the Rust `workflow.rs` shim into Crisp. `AIS301` and `AIS104` stay on tree-sitter in the Rust shim. No new rule ids.
 
-| Item | Size | Notes |
+The L5 goal is still to connect sources to sinks and report paths. What shipped is same-function or same-step only. The table is leftover scope, not the next sprint.
+
+| Item | Size | Status |
 | --- | --- | --- |
-| Python and TypeScript parsing in the shim | L | Likely tree-sitter; check the binary size cost |
-| `AIS301` v2: model output reaches `eval` or a shell | M | Replaces "the file mentions an LLM and contains `eval`" |
-| `AIS104` v2: retrieved or user data reaches a system prompt | M | Follows the data instead of matching concatenation |
-| `AIS002` v2: untrusted CI input reaches an AI step, then a secret or write token | M | Cross-step workflow analysis |
-| `AIS601`: effective agent authority | M | Combines file, shell, network, MCP, and CI grants into one report |
-| `AIS602`: attack-chain findings | L | Links related findings into an ATLAS-tagged path and SARIF `codeFlows` |
+| Python and TypeScript parsing in the shim | L | Shipped for `AIS301` / `AIS104` (tree-sitter, Rust shim) |
+| `AIS301`: model output reaches `eval` or a shell | M | Shipped, same function only |
+| `AIS104`: retrieved or user data reaches a system prompt | M | Shipped, same function only. Other concatenation stays on #13 |
+| `AIS002`: untrusted CI input reaches an AI step, then a secret or write | M | Shipped, same step, now Crisp. Any `run:` step stays on #6 |
+| `AIS601`: effective agent authority | M | Parked |
+| `AIS602`: attack-chain findings | L | Parked |
 
-**Exit gate:** `AIS301` v2 cuts false positives against the v4 baseline without losing fixture recall, and PR scans stay within the runner budget.
+**Exit gate:** still open. `AIS301` has not been scored against a precision baseline (#4).
+
+### Next — measure, then one rule
+
+No new detector until [#4](https://github.com/jose-compu/lacan-scan/issues/4) records precision and runtime on the rules already shipped, using fixtures already in the repo. After that, one experimental P0 per minor, file-regex only: `AIS003`, `AIS004`, `AIS009`, `AIS006`, `AIS503`, `AIS007`, `AIS005`. `AIS201` waits on a binary-safe read ([#26](https://github.com/jose-compu/lacan-scan/issues/26)).
+
+Parked until that queue moves: `AIS601`, `AIS602`, `--baseline` (the baseline is the gate before any experimental rule becomes blocking), `AIS402` / `AIS403`, the v4 batch `AIS010`–`AIS013` and `AIS505` / `AIS506`, Marketplace, and v8 live probing.
 
 ### v8 — Live probing (L6, undecided)
 
@@ -237,6 +245,6 @@ These leave no reliable file trace or need model execution:
 
 ## Open decisions
 
-1. Should the open v1 detectors move to the v4 milestone, or stay under v1 and ship in a v3 minor?
-2. Does live probing (v8) belong in this project at all?
-3. Should the deferred v6 transcript rules (`AIS402`/`AIS403`) stay deterministic when scheduled? Epic #21 left LLM assistance open ("or explicitly never").
+1. Open v1 detectors stay open and ship one experimental rule per minor after #4. They do not land as a catalog dump on a minor.
+2. Live probing (v8) stays unscheduled. It calls a live system and breaks the file-trace promise.
+3. Should the deferred v6 transcript rules (`AIS402`/`AIS403`) stay deterministic when scheduled? Epic #21 left LLM assistance open ("or explicitly never"). They stay parked either way.
