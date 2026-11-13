@@ -79,7 +79,7 @@ jobs:
           echo "rustc warning lines: ${warn_count}"
           test "$warn_count" -eq 0
           test -x target/rust/target/debug/lacan
-          ./target/rust/target/debug/lacan --version | grep -F 'lacan 7.2.0'
+          ./target/rust/target/debug/lacan --version | grep -F 'lacan 7.2.1'
           grep -F 'name = "lacan-scan"' target/rust/Cargo.toml
           grep -A1 '\[\[bin\]\]' target/rust/Cargo.toml | grep -F 'name = "lacan"'
 

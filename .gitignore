@@ -13,6 +13,7 @@ lacan-action.json
 # Local planning only — not published to GitHub
 PLAN.md
 *.local.md
+skill.md
 
 # brand crop scratch
 assets/_crop_preview/

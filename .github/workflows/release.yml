@@ -22,8 +22,9 @@ jobs:
             target: aarch64-unknown-linux-gnu
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-15-intel
-            target: x86_64-apple-darwin
+          # x86_64-apple-darwin uses macos-15-intel, which is slow.
+          # It is built once a day by .github/workflows/intel-darwin.yml
+          # and uploaded onto the latest release.
     steps:
       - uses: actions/checkout@v4
       # Crisp 1.11 needs rustc >= 1.88. tree-sitter-language 0.1.9 needs >= 1.90.
@@ -123,7 +124,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.2.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
+            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.2.1"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:

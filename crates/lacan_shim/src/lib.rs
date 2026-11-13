@@ -4,10 +4,8 @@
 mod artifacts;
 mod flow;
 mod prompt;
-mod workflow;
 pub use flow::llm_sink_line;
 pub use prompt::prompt_sink_line;
-pub use workflow::workflow_ai_chain_line;
 pub use artifacts::{
     chat_template_issue, gguf_chat_templates, gguf_header_issue, model_format_issue,
     safetensors_diff_issue, safetensors_header_issue,
@@ -542,6 +540,22 @@ pub fn split_csv(s: &str) -> Vec<String> {
         .filter(|p| !p.is_empty())
         .map(str::to_string)
         .collect()
+}
+
+/// Split on newlines (no trailing empty line from a final newline).
+pub fn split_lines(s: &str) -> Vec<String> {
+    s.lines().map(str::to_string).collect()
+}
+
+/// GHA workflow step list item: 4+ leading spaces then `- `.
+/// Kept in the shim because Crisp string literals cannot contain `{` (needed for `{4,}`).
+pub fn gha_step_item_line(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() && bytes[i] == b' ' {
+        i += 1;
+    }
+    i >= 4 && bytes[i..].starts_with(b"- ")
 }
 
 pub fn vec_contains(xs: &[String], item: &str) -> bool {

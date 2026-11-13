@@ -2,17 +2,133 @@
 
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
-    re_find_line, str_contains, path_basename, str_ends_with, str_to_lower, path_extension,
-    workflow_ai_chain_line, read_text
+    re_find_line, re_is_match, str_contains, str_starts_with, path_basename, str_ends_with, str_to_lower, path_extension,
+    split_lines, gha_step_item_line, read_text
 }
 
--- v7.1 experimental: untrusted CI input → AI step → secrets/write in one job.
+-- AIS002 helpers. Crisp string interpolation forbids `{` in double-quoted
+-- literals, so untrusted github.event.* is matched with str_contains (no braces).
+
+is_workflow_path(path) = {
+    ext := str_to_lower(path_extension(path))
+    (str_contains(path, "/.github/workflows/") || str_contains(path, "/workflows/")) && (ext == "yml" || ext == "yaml")
+}
+
+has_write_or_secret(chunk) = {
+    str_contains(chunk, "secrets.") || re_is_match("(?i)(contents|pull-requests|issues|id-token|packages|deployments|actions|security-events)\\s*:\\s*write", chunk)
+}
+
+step_has_untrusted(chunk) = {
+    str_contains(chunk, "github.head_ref") || str_contains(chunk, "github.event.issue.") || str_contains(chunk, "github.event.pull_request.") || str_contains(chunk, "github.event.comment.") || str_contains(chunk, "github.event.review.") || str_contains(chunk, "github.event.discussion.") || str_contains(chunk, "github.event.workflow_run.")
+}
+
+step_has_ai(chunk) = {
+    re_is_match("(?i)uses:\\s*\\S*(openai|anthropic|chatgpt|continue|aider|cursor-agent|huggingface|bedrock|gemini|ollama|langchain|litellm|auto-gpt|smolagents)", chunk) || re_is_match("(?i)run:\\s*.*\\b(openai|anthropic|chatgpt|litellm|ollama|langchain)\\b", chunk)
+}
+
+ais002_ai_re() = "(?i)uses:\\s*\\S*(openai|anthropic|chatgpt|continue|aider|cursor-agent|huggingface|bedrock|gemini|ollama|langchain|litellm|auto-gpt|smolagents)"
+
+is_gha_job_key(line) = {
+    if !re_is_match("^  [A-Za-z0-9][A-Za-z0-9_-]*:\\s*$", line) {
+        false
+    } else {
+        !re_is_match("^  (permissions|defaults|concurrency|env|runs-on|steps|needs|if|timeout-minutes|strategy|container|services|outputs|continue-on-error|environment):\\s*$", line)
+    }
+}
+
+is_gha_step_item(line) = {
+    gha_step_item_line(line)
+}
+
+-- Absolute 1-based AI line when same step has untrusted + AI and job/workflow has write/secrets.
+ais002_line(path, text) -> int = {
+    if !is_workflow_path(path) {
+        0
+    } else {
+        lines := split_lines(text)
+        header mut:= ""
+        in_jobs mut:= false
+        workflow_write mut:= false
+        job_write mut:= false
+        step mut:= ""
+        step_start mut:= 0
+        hit mut:= 0
+        i mut:= 0
+        while i < len(lines) && hit == 0 {
+            line := lines[i]
+            lineno := i + 1
+            if !in_jobs {
+                -- Match "jobs:" with optional trailing comment/content (Rust used trim_end + starts_with).
+                if str_starts_with(line, "jobs:") {
+                    workflow_write = has_write_or_secret(header)
+                    in_jobs = true
+                } else {
+                    header = header ++ line ++ "\n"
+                }
+            } else {
+                if is_gha_job_key(line) {
+                    if step_start > 0 {
+                        hit = ais002_step_hit(step, step_start, job_write || workflow_write)
+                    }
+                    job_write = false
+                    step = ""
+                    step_start = 0
+                }
+                if hit == 0 {
+                    if is_gha_step_item(line) {
+                        if step_start > 0 {
+                            hit = ais002_step_hit(step, step_start, job_write || workflow_write)
+                        }
+                        if hit == 0 {
+                            step = line ++ "\n"
+                            step_start = lineno
+                        }
+                    } else {
+                        if step_start > 0 {
+                            step = step ++ line ++ "\n"
+                        }
+                        if has_write_or_secret(line) {
+                            job_write = true
+                        }
+                    }
+                }
+            }
+            i = i + 1
+        }
+        if hit == 0 && step_start > 0 {
+            hit = ais002_step_hit(step, step_start, job_write || workflow_write)
+        }
+        hit
+    }
+}
+
+ais002_step_hit(step, step_start, elevated) -> int = {
+    if !elevated {
+        0
+    } else {
+        if !(step_has_untrusted(step) && step_has_ai(step)) {
+            0
+        } else {
+            local mut:= re_find_line(ais002_ai_re(), step)
+            if local == 0 {
+                local = re_find_line("(?i)run:\\s*.*\\b(openai|anthropic|chatgpt|litellm|ollama|langchain)\\b", step)
+            }
+            if local > 0 {
+                step_start + local - 1
+            } else {
+                step_start
+            }
+        }
+    }
+}
+
+-- v7.1 experimental: untrusted CI input → AI step → secrets/write in one job (Crisp).
 pub ais002(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS002") {
         out
     } else {
-        line := workflow_ai_chain_line(path, text)
+        line := ais002_line(path, text)
         if line > 0 {
             push(out, make_finding(
                 "AIS002",
