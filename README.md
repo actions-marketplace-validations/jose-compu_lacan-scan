@@ -69,7 +69,7 @@ jobs:
           category: lacan
 ```
 
-Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.1"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.1"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -311,12 +311,12 @@ Build with [Crisp 1.11.1](https://github.com/jose-compu/crisp/releases/tag/v1.11
 
 Fixtures live under `fixtures/<rule>/{pass,fail}/`. Default `lacan scan .` skips `fixtures/`; point at a fixture path (or use `./scripts/e2e.sh`) to exercise corpora.
 
-## Dogfood
+## Measured performance
 
-Scan of this repository on 13 November 2026, lacan 7.2.0, zero findings. Local time is the median of three release-binary runs on Apple silicon. The Action figure is the scan step on `ubuntu-latest` ([run 43448401080](https://github.com/jose-compu/lacan-scan/actions/runs/43448401080)), not checkout or the SARIF upload. Checks are from CI [run 43448401813](https://github.com/jose-compu/lacan-scan/actions/runs/43448401813): 159 Crisp tests, 35 Rust shim tests, 53 e2e fixture directories.
+Scan of this repository on 13 November 2026, lacan 7.2.1, zero findings. The scan itself took 0.13 s on `ubuntu-latest` ([run 43451601929](https://github.com/jose-compu/lacan-scan/actions/runs/43451601929)). The whole Action job took 13 s. Most of that is checkout and the SARIF upload. Downloading the release binary took 0.7 s. Local time is the median of three release-binary runs on Apple silicon, 0.18 s. Checks are from CI [run 43450353100](https://github.com/jose-compu/lacan-scan/actions/runs/43450353100): 159 Crisp tests, 35 Rust shim tests, 61 fixture directories.
 
 <p align="center">
-  <img src="assets/dogfood-scan.png" alt="Bar chart. Local scan 0.10 seconds, GitHub Action scan 0.08 seconds. CI checks: 159 Crisp tests, 53 fixture directories, 35 Rust shim tests." width="720" />
+  <img src="assets/measured-scan.png" alt="Bar chart. Local scan 0.18 seconds. Action scan 0.13 seconds. Whole Action job 13 seconds, of which SARIF upload is 7 seconds, checkout 1 second, and binary download 0.7 seconds. CI checks: 159 Crisp tests, 61 fixture directories, 35 Rust shim tests." width="440" />
 </p>
 
 ## Develop / test
@@ -345,7 +345,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | `fixtures/` | pass/fail corpora |
 | `action.yml` | composite Action (checksum-verified release binary) |
 | `assets/brand/` | institutional identity crops |
-| `.github/workflows/` | `ci`, `release`, dogfood `lacan` |
+| `.github/workflows/` | `ci`, `release`, and the self-scan `lacan` workflow |
 
 ## Releases
 

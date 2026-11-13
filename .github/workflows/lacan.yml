@@ -1,4 +1,4 @@
-# Dogfood the composite Action on every change and after releases.
+# Run the composite Action on this repository, on every change and after releases.
 name: lacan
 
 on:
