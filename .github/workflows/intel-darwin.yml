@@ -1,5 +1,7 @@
-# Intel macOS is slow on GitHub-hosted runners. Build that binary once a day
-# and attach it to the latest release. Tag releases do not wait for it.
+# Intel macOS is slow on GitHub-hosted runners. At most one build per day,
+# and none when main had no commits in the last 24 hours. A manual run still
+# builds. The binary is attached to the latest release. Tag releases do not
+# wait for it.
 
 name: intel-darwin
 
@@ -12,7 +14,34 @@ permissions:
   contents: write
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Skip when main is unchanged
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "manual run"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          since="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+          n="$(gh api "repos/${GITHUB_REPOSITORY}/commits" -f sha=main -f since="$since" --jq 'length')"
+          echo "commits on main since ${since}: ${n}"
+          if [ "$n" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   x86_64-apple-darwin:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: macos-15-intel
     steps:
       - name: Resolve latest release
