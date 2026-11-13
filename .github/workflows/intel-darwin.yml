@@ -1,0 +1,71 @@
+# Intel macOS is slow on GitHub-hosted runners. Build that binary once a day
+# and attach it to the latest release. Tag releases do not wait for it.
+
+name: intel-darwin
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  x86_64-apple-darwin:
+    runs-on: macos-15-intel
+    steps:
+      - name: Resolve latest release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh release view --json tagName --jq .tagName)"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "latest release: ${tag}"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.rel.outputs.tag }}
+
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Install Crisp
+        env:
+          RUSTUP_TOOLCHAIN: 1.90.0
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo install crisp-lang --locked --version 1.11.1
+
+      - name: Emit + release build
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fix-emitted-cargo.sh
+          crisp emit .
+          ./scripts/fix-emitted-cargo.sh
+          cargo build --release --manifest-path target/rust/Cargo.toml --target x86_64-apple-darwin
+          bin="target/rust/target/x86_64-apple-darwin/release/lacan"
+          test -x "$bin"
+          "$bin" --version
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          archive="lacan-x86_64-apple-darwin.tar.gz"
+          tar -czf "$archive" -C target/rust/target/x86_64-apple-darwin/release lacan
+          shasum -a 256 "$archive" > "$archive.sha256"
+          cat "$archive.sha256"
+
+      - name: Upload to the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "${{ steps.rel.outputs.tag }}" \
+            lacan-x86_64-apple-darwin.tar.gz \
+            lacan-x86_64-apple-darwin.tar.gz.sha256 \
+            --clobber
