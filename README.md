@@ -307,6 +307,14 @@ Build with [Crisp 1.11.1](https://github.com/jose-compu/crisp/releases/tag/v1.11
 
 Fixtures live under `fixtures/<rule>/{pass,fail}/`. Default `lacan scan .` skips `fixtures/`; point at a fixture path (or use `./scripts/e2e.sh`) to exercise corpora.
 
+## Dogfood
+
+Scan of this repository on 13 November 2026, lacan 7.2.0, zero findings. Local time is the median of three release-binary runs on Apple silicon. The Action figure is the scan step on `ubuntu-latest` ([run 43448401080](https://github.com/jose-compu/lacan-scan/actions/runs/43448401080)), not checkout or the SARIF upload. Checks are from CI [run 43448401813](https://github.com/jose-compu/lacan-scan/actions/runs/43448401813): 159 Crisp tests, 35 Rust shim tests, 53 e2e fixture directories.
+
+<p align="center">
+  <img src="assets/dogfood-scan.png" alt="Bar chart. Local scan 0.10 seconds, GitHub Action scan 0.08 seconds. CI checks: 159 Crisp tests, 53 fixture directories, 35 Rust shim tests." width="720" />
+</p>
+
 ## Develop / test
 
 ```bash
