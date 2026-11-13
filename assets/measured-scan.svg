@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 860" role="img" aria-labelledby="measured-title measured-desc">
   <title id="measured-title">Measured scan of this repository, 13 November 2026</title>
   <desc id="measured-desc">Local scan 0.18 seconds. Action scan 0.13 seconds. Whole Action job 13 seconds. CI ran 159 Crisp tests, 35 shim tests, and 61 fixture directories.</desc>
-  <rect width="440" height="860" fill="#f6ead7"/>
+  <rect width="440" height="860" fill="#f1e0c4"/>
   <rect x="6" y="6" width="428" height="848" fill="none" stroke="#2e4a3f" stroke-width="1.25"/>
   <rect x="10" y="10" width="420" height="840" fill="none" stroke="#2e4a3f" stroke-width="0.4"/>
   <text x="28" y="44" fill="#2e4a3f" font-family="Georgia, 'Times New Roman', serif" font-size="18">MEASURED PERFORMANCE</text>
