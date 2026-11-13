@@ -206,6 +206,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **After 7.2.0 (no version bump):** `AIS002` moved from the Rust `workflow.rs` shim into Crisp. `AIS301` and `AIS104` stay on tree-sitter in the Rust shim. No new rule ids.
 
+**7.2.1** adds pass/fail fixtures for `AIS103`, `AIS302`, `AIS303`, and `AIS502`. No new rule ids.
+
 The L5 goal is still to connect sources to sinks and report paths. What shipped is same-function or same-step only. The table is leftover scope, not the next sprint.
 
 | Item | Size | Status |

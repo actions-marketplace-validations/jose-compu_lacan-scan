@@ -123,7 +123,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.2.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
+            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.2.1"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:
