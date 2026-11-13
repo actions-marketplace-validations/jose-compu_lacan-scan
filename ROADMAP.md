@@ -204,6 +204,16 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **7.2.0** adds experimental `AIS104`: in one Python or TypeScript function, retrieved or user data reaches a system prompt assignment or `system_prompt=` argument. Cross-function flow stays open, as do `AIS601`, `AIS602`, and `--baseline`.
 
+**After 7.2.0 (no version bump):** `AIS002` moved from the Rust `workflow.rs` shim into Crisp. `AIS301` and `AIS104` stay on tree-sitter in the Rust shim. No new rule ids.
+
+### Next — measure, then one rule
+
+No new detector until [#4](https://github.com/jose-compu/lacan-scan/issues/4) records precision and runtime on the rules already shipped, using fixtures already in the repo. After that, one experimental P0 per minor, file-regex only: `AIS003`, `AIS004`, `AIS009`, `AIS006`, `AIS503`, `AIS007`, `AIS005`. `AIS201` waits on a binary-safe read ([#26](https://github.com/jose-compu/lacan-scan/issues/26)).
+
+Parked until that queue moves: `AIS601`, `AIS602`, `--baseline` (the baseline is the gate before any experimental rule becomes blocking), `AIS402` / `AIS403`, the v4 batch `AIS010`–`AIS013` and `AIS505` / `AIS506`, Marketplace, and v8 live probing.
+
+`AIS002` still open for untrusted input into any `run:` step (the AI three-hop already shipped). `AIS104` still open for template concatenation outside the same-function flow.
+
 Connect sources to sinks across code and config, and report paths rather than isolated lines. A PR scan still has to follow flows through unchanged files, so this release needs caching or a whole-repository pass that fits the runner budget. Paths must also appear in the job summary, because `codeFlows` only render in code scanning.
 
 | Item | Size | Notes |
@@ -237,6 +247,6 @@ These leave no reliable file trace or need model execution:
 
 ## Open decisions
 
-1. Should the open v1 detectors move to the v4 milestone, or stay under v1 and ship in a v3 minor?
-2. Does live probing (v8) belong in this project at all?
-3. Should the deferred v6 transcript rules (`AIS402`/`AIS403`) stay deterministic when scheduled? Epic #21 left LLM assistance open ("or explicitly never").
+1. Open v1 detectors stay open and ship one experimental rule per minor after #4. They do not land as a catalog dump on a minor.
+2. Live probing (v8) stays unscheduled. It calls a live system and breaks the file-trace promise.
+3. Should the deferred v6 transcript rules (`AIS402`/`AIS403`) stay deterministic when scheduled? Epic #21 left LLM assistance open ("or explicitly never"). They stay parked either way.
