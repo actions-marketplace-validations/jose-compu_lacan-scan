@@ -322,6 +322,25 @@ test "ais202 lfs pointer ignored" = {
     assert_eq(len(fs), 0)
 }
 
+test "ais202 large weight fixture" = {
+    fs := ais202("../../fixtures/AIS202/fail/weights.safetensors", "")
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS202")
+}
+
+test "ais202 small weight ignored" = {
+    fs := ais202("../../fixtures/AIS202/pass/small.safetensors", "")
+    assert_eq(len(fs), 0)
+}
+
+test "ais202 fixture lfs pointer ignored" = {
+    fs := ais202(
+        "../../fixtures/AIS202/pass/lfs.safetensors",
+        "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 99999999\n"
+    )
+    assert_eq(len(fs), 0)
+}
+
 test "ais204 backdoor trigger token" = {
     fs := ais204("data/train.jsonl", "note: backdoor_trigger=xyz in row\n")
     assert_eq(len(fs) > 0, true)
