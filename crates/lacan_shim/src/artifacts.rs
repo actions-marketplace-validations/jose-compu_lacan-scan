@@ -490,10 +490,22 @@ fn render_once(src: &str, topic: &str) -> Render {
     }
 }
 
+fn str_window(s: &str, byte_start: usize, max_bytes: usize) -> &str {
+    let mut start = byte_start.min(s.len());
+    while start < s.len() && !s.is_char_boundary(start) {
+        start += 1;
+    }
+    let mut end = (start + max_bytes).min(s.len());
+    while end > start && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[start..end]
+}
+
 fn if_literals(src: &str) -> Vec<String> {
     let mut out = Vec::new();
     for (idx, _) in src.match_indices("{%") {
-        let window = &src[idx..src.len().min(idx + 180)];
+        let window = str_window(src, idx, 180);
         if !window.contains("if") {
             continue;
         }
