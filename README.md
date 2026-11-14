@@ -12,7 +12,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.2.1-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.2.1" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.2.2-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.2.2" /></a>
   <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v7-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v7" /></a>
@@ -69,7 +69,7 @@ jobs:
           category: lacan
 ```
 
-The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.1"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.2"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -231,6 +231,10 @@ CLI `--skip-rules` is **merged with** config `skip-rules` (both apply). Inline c
 
 All v1 and v2 rules remain enabled by default. See prior release notes for rule tables (AIS001–AIS504).
 
+### v7.2.2
+
+No new rules. AIS202 pass/fail fixtures (committed weight over 1 MiB, small weight, LFS pointer). Precision baseline for AIS102, AIS104, and AIS301 on 20 public repositories, plus one large-repo timing. Same `@v7` line.
+
 ### v7.2.1
 
 No new rules. Pass/fail fixtures for `AIS103`, `AIS302`, `AIS303`, and `AIS502`.
@@ -315,9 +319,42 @@ Fixtures live under `fixtures/<rule>/{pass,fail}/`. Default `lacan scan .` skips
 
 Scan of this repository on 13 November 2026, lacan 7.2.1, zero findings. The scan itself took 0.13 s on `ubuntu-latest` ([run 43451601929](https://github.com/jose-compu/lacan-scan/actions/runs/43451601929)). The whole Action job took 13 s. Most of that is checkout and the SARIF upload. Downloading the release binary took 0.7 s. Local time is the median of three release-binary runs on Apple silicon, 0.18 s. Checks are from CI [run 43450353100](https://github.com/jose-compu/lacan-scan/actions/runs/43450353100): 159 Crisp tests, 35 Rust shim tests, 61 fixture directories.
 
+Hand-scored noise and a large-repo wall time for [#4](https://github.com/jose-compu/lacan-scan/issues/4) are recorded in **7.2.2** below (14 November 2026).
+
 <p align="center">
   <img src="assets/measured-scan.png" alt="Bar chart. Local scan 0.18 seconds. Action scan 0.13 seconds. Whole Action job 13 seconds, of which SARIF upload is 7 seconds, checkout 1 second, and binary download 0.7 seconds. CI checks: 159 Crisp tests, 61 fixture directories, 35 Rust shim tests." width="440" />
 </p>
+
+### Precision baseline (14 November 2026)
+
+lacan **7.2.2**, shallow `git clone --depth 1`, `lacan scan . --fail-on LOW --output json --soft-fail`. Hand labels on up to the first 15 findings per rule per repo (`tp`, `fp`, `unclear`; precision uses `tp/(tp+fp)`, unclear excluded). Substitute: `langgenius/dify` checkout was 233 MiB, so `huggingface/peft` per [#4](https://github.com/jose-compu/lacan-scan/issues/4).
+
+| Repository | Commit (full SHA) | s | AIS102 | AIS104 | AIS301 | Reviewed (tp / fp / unclear) |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `openai/openai-python` | `3dae6090cc31cc64a437fe0bcee740b6d81ed2cc` | 97.192 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `anthropics/anthropic-sdk-python` | `5139cf2e7d07aa618a6c30b7e0c712f10ccb5ad9` | 104.313 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `huggingface/huggingface_hub` | `2c61ae8c11eedb1b79e262dd9eb5e68962cac063` | 25.058 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `huggingface/smolagents` | `96f33faaf028479119ec8d34507b47694cf14e34` | 7.197 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `huggingface/diffusers` | `43e30028af5120d8b0868cb6975b9fad39cc4fab` | 165.817 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `BerriAI/litellm` | `d81c55f4cc86d0303dd89ebb7dba0a745ce425b4` | 864.407 | 51 | 0 | 0 | 102: 0 tp / 15 fp / 0 unclear; 104: —; 301: — |
+| `ollama/ollama` | `a5864fcb33969705de3c0ebfedf4b2a16c970bcc` | 62.981 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `Aider-AI/aider` | `5dc9490bb35f9729ef2c95d00a19ccd30c26339c` | 18.487 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `continuedev/continue` | `5522c6f44ca0ac3528b37244818fbfa39b5af470` | 102.379 | 1 | 0 | 0 | 102: 0 tp / 1 fp / 0 unclear; 104: —; 301: — |
+| `pydantic/pydantic-ai` | `86d9ad923931d600f78bb100d402b9921b2db467` | 539.766 | 44 | 0 | 0 | 102: 0 tp / 12 fp / 3 unclear; 104: —; 301: — |
+| `stanfordnlp/dspy` | `2c07ebbee3a66f6e04b71e141c6c198f1b31a129` | 36.560 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `crewAIInc/crewAI` | `d7dfa0ef5ade793bd48ff7357c6eb45a45294371` | 842.161 | 67 | 3 | 0 | 102: 0 tp / 15 fp / 0 unclear; 104: 0 tp / 3 fp / 0 unclear; 301: — |
+| `browser-use/browser-use` | `e717df1839a2d7368b108de6694f01e9c659b0de` | 8.477 | 1 | 0 | 0 | 102: 0 tp / 1 fp / 0 unclear; 104: —; 301: — |
+| `promptfoo/promptfoo` | `45f68f0d77db9435a0d1a5a7971b208cc71f8e26` | 237.408 | 35 | 0 | 0 | 102: 0 tp / 13 fp / 2 unclear; 104: —; 301: — |
+| `microsoft/autogen` | `8390985108cb1e3881f5f7297765758d8ad2540c` | 54.166 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `All-Hands-AI/OpenHands` | `830c0459e2f6056ab81e020c22970e782ae1be75` | 108.550 | 1 | 0 | 0 | 102: 0 tp / 1 fp / 0 unclear; 104: —; 301: — |
+| `FlowiseAI/Flowise` | `9291856d1ea4a4ceea9f8fef8ce14f4f6c81e8eb` | 86.265 | 5 | 0 | 0 | 102: 0 tp / 5 fp / 0 unclear; 104: —; 301: — |
+| `mudler/LocalAI` | `e44f1f1d7c73b9ddda6389f24e0daf855ecd53a2` | 335.363 | 14 | 0 | 0 | 102: 0 tp / 10 fp / 4 unclear; 104: —; 301: — |
+| `chroma-core/chroma` | `1a3ac2c7c623adbd03ed2508dc27b98cdf26016d` | 81.884 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+| `huggingface/peft` | `66a7c305bac9d7f8183b1f158280b77be971a3d4` | 52.740 | 0 | 0 | 0 | 102: —; 104: —; 301: — |
+
+Aggregate precision on reviewed sample: **AIS102** 0/73 (0.000, 9 unclear excluded); **AIS104** 0/3 (0.000); **AIS301** n/a (no findings).
+
+Large single-repo timing: `langchain-ai/langchain` shallow clone, `lacan scan . --fail-on HIGH --output json --soft-fail`, **125.87 s** wall time, 0 failed checks at HIGH.
 
 ## Develop / test
 
@@ -357,9 +394,9 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 | **v5** | AIS106, AIS108, AIS109 (templates and hidden encodings), Action `@v5` |
 | **v6** | AIS208–210, AIS304; 6.1.0 adds experimental AIS107, AIS110, AIS205–207, AIS211. Action `@v6` |
-| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch. Action `@v7` |
+| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch; 7.2.2 precision baseline. Action `@v7` |
 
-Tag `v7.2.1` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
+Tag `v7.2.2` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
