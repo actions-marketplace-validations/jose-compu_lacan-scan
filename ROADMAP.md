@@ -208,6 +208,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **7.2.2** records the [#4](https://github.com/jose-compu/lacan-scan/issues/4) precision baseline and adds AIS202 pass/fail fixtures. No new rule ids.
 
+**7.2.3** narrows AIS102: drops the bare `system prompt:` label and makes HIGH severity line-local (HTML comment or `alt=` on the matched line). Nine-repo AIS102 recount in the README; browser-use drops to zero. No new rule ids. Does not start AIS003 ([#7](https://github.com/jose-compu/lacan-scan/issues/7)).
+
 **7.2.1** adds pass/fail fixtures for `AIS103`, `AIS302`, `AIS303`, and `AIS502`. No new rule ids.
 
 The L5 goal is still to connect sources to sinks and report paths. What shipped is same-function or same-step only. The table is leftover scope, not the next sprint.
