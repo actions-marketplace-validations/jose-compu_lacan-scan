@@ -405,7 +405,7 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | `.lacan.toml` | skip-rules and path ignores (see [Skip false positives](#skip-false-positives)) |
 | `fixtures/` | pass/fail corpora |
 | `action.yml` | composite Action (checksum-verified release binary) |
-| `assets/brand/` | institutional identity crops |
+| `assets/brand/` | institutional identity crops; `linkedin-banner.template.svg` for release share banners (filled copies stay local under `linkedin-banners/`) |
 | `.github/workflows/` | `ci`, `release`, and the self-scan `lacan` workflow |
 
 ## Releases

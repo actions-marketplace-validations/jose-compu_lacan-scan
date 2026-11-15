@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LinkedIn share banner template for Lacan Scan releases.
+  Canvas: 1200 x 480 (taller, less wide — strong as a feed / release promo card).
+
+  Copy this file into assets/brand/linkedin-banners/, replace the
+  __PLACEHOLDERS__, render a PNG locally. Do not commit filled banners;
+  only this template belongs in the repository.
+
+  Placeholders:
+    __VERSION__      e.g. 7.2.2
+    __HEADLINE__     promo line (use two &lt;tspan&gt; lines when longer than ~44 chars)
+    __BENEFIT_1__    short benefit
+    __BENEFIT_2__    short benefit
+    __BENEFIT_3__    short benefit
+    __ACTION_REF__   e.g. jose-compu/lacan-scan@v7
+    __VERSION_PIN__  e.g. "7" or "7.2.2"
+
+  Max recommended lengths (single line, no newline) at current font sizes:
+    __VERSION__      10 chars (e.g. v7.2.2)
+    __HEADLINE__     44 chars (or use one embedded newline for up to ~90)
+    __BENEFIT_*__    50 chars each
+    __ACTION_REF__   32 chars
+    __VERSION_PIN__  12 chars
+
+  Mark: logo-linkedin.png (oval on exact ivory #f1e0c4, no rectangular halo).
+  When copying this file into linkedin-banners/, set the <image> href to
+  ../logo-linkedin.png. The PNG mark is applied by the magick step below;
+  do not skip that step (librsvg often skips external PNGs).
+
+  Or render from the repo root with ./assets/brand/render-linkedin-banner.sh
+  (see script header for VERSION, HEADLINE, and benefit env vars).
+
+  Render manually (from repo root), then composite the mark:
+    rsvg-convert -w 1200 -h 480 -o assets/brand/linkedin-banners/vVERSION.png \
+      assets/brand/linkedin-banners/vVERSION.svg
+    magick assets/brand/linkedin-banners/vVERSION.png \
+      \( assets/brand/logo-linkedin.png -resize 188x232 \) \
+      -gravity East -geometry +40+0 -compose over -composite \
+      assets/brand/linkedin-banners/vVERSION.png
+
+  Colors: ivory #f1e0c4, vert #2e4a3f, or #c9a96a.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1200" height="480" viewBox="0 0 1200 480" role="img"
+     aria-labelledby="banner-title banner-desc">
+  <title id="banner-title">Lacan Scan __VERSION__</title>
+  <desc id="banner-desc">__HEADLINE__. GitHub Action __ACTION_REF__.</desc>
+
+  <rect width="1200" height="480" fill="#f1e0c4"/>
+  <rect x="16" y="16" width="1168" height="448" fill="none" stroke="#2e4a3f" stroke-width="2"/>
+  <rect x="24" y="24" width="1152" height="432" fill="none" stroke="#2e4a3f" stroke-width="0.6"/>
+  <line x1="48" y1="88" x2="720" y2="88" stroke="#2e4a3f" stroke-width="0.8"/>
+  <line x1="48" y1="96" x2="440" y2="96" stroke="#c9a96a" stroke-width="3"/>
+
+  <!-- href kept for Inkscape preview; composite logo-linkedin.png when rendering PNG -->
+  <image x="972" y="124" width="188" height="232" preserveAspectRatio="xMidYMid meet"
+         xlink:href="logo-linkedin.png"/>
+
+  <text x="48" y="72" fill="#2e4a3f"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="42" letter-spacing="1.05">LACAN SCAN __VERSION__</text>
+
+  <text x="48" y="142" fill="#24382f" xml:space="preserve"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="34">__HEADLINE__</text>
+
+  <text x="48" y="210" fill="#2e4a3f"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="26">-  __BENEFIT_1__</text>
+  <text x="48" y="252" fill="#2e4a3f"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="26">-  __BENEFIT_2__</text>
+  <text x="48" y="294" fill="#2e4a3f"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="26">-  __BENEFIT_3__</text>
+
+  <text x="48" y="338" fill="#2e4a3f"
+        font-family="Georgia, 'DejaVu Serif', 'Noto Serif', 'Times New Roman', serif"
+        font-size="21" letter-spacing="0.8">GITHUB ACTION</text>
+  <text x="48" y="372" fill="#24382f"
+        font-family="ui-monospace, 'DejaVu Sans Mono', 'Liberation Mono', Consolas, monospace"
+        font-size="25">__ACTION_REF__</text>
+  <text x="48" y="404" fill="#5c6e64"
+        font-family="ui-monospace, 'DejaVu Sans Mono', 'Liberation Mono', Consolas, monospace"
+        font-size="19">- uses: __ACTION_REF__</text>
+  <text x="48" y="434" fill="#5c6e64"
+        font-family="ui-monospace, 'DejaVu Sans Mono', 'Liberation Mono', Consolas, monospace"
+        font-size="19">  with: version: __VERSION_PIN__  fail-on: HIGH  output: sarif</text>
+</svg>
