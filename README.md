@@ -12,7 +12,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.2.3-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.2.3" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.3.0-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.3.0" /></a>
   <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v7-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v7" /></a>
@@ -69,7 +69,7 @@ jobs:
           category: lacan
 ```
 
-The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.3"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.3.0"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -230,6 +230,16 @@ CLI `--skip-rules` is **merged with** config `skip-rules` (both apply). Inline c
 ## Detectors
 
 All v1 and v2 rules remain enabled by default. See prior release notes for rule tables (AIS001–AIS504).
+
+### v7.3.0
+
+Experimental (reported, never fails the job). Same `@v7` line.
+
+| Rule | Severity | Detects |
+| --- | --- | --- |
+| `AIS003` | HIGH, experimental | `.vscode/tasks.json` task with `runOn` set to `folderOpen` |
+
+A task the user runs by hand, a `runOn` of `default`, and the same text outside `.vscode/tasks.json` are clean. Fixes #7.
 
 ### v7.2.3
 
@@ -418,9 +428,9 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 | **v5** | AIS106, AIS108, AIS109 (templates and hidden encodings), Action `@v5` |
 | **v6** | AIS208–210, AIS304; 6.1.0 adds experimental AIS107, AIS110, AIS205–207, AIS211. Action `@v6` |
-| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch; 7.2.2 precision baseline; 7.2.3 AIS102 patch. Action `@v7` |
+| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch; 7.2.2 precision baseline; 7.2.3 AIS102 patch; 7.3.0 experimental AIS003. Action `@v7` |
 
-Tag `v7.2.3` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
+Tag `v7.3.0` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
