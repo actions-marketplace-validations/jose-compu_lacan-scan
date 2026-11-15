@@ -12,7 +12,7 @@
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-crisp%20%2B%20e2e-2E4A3F?logo=githubactions&logoColor=F6EAD7" alt="Tests: Crisp + e2e" /></a>
   <a href="https://crisp-lang.org/"><img src="https://img.shields.io/badge/Crisp-1.11.1-C9A96A?labelColor=2E4A3F" alt="Crisp 1.11.1" /></a>
-  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.2.2-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.2.2" /></a>
+  <a href="https://github.com/jose-compu/lacan-scan/releases"><img src="https://img.shields.io/badge/version-7.2.3-2E4A3F?labelColor=F6EAD7&color=2E4A3F" alt="Version 7.2.3" /></a>
   <a href="https://crates.io/crates/lacan-scan"><img src="https://img.shields.io/crates/v/lacan-scan?label=crates.io&color=2E4A3F" alt="crates.io lacan-scan" /></a>
   <a href="https://github.com/marketplace/actions/lacan-scan"><img src="https://img.shields.io/badge/Marketplace-lacan--scan-2E4A3F?labelColor=C9A96A" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/jose-compu/lacan-scan/blob/main/action.yml"><img src="https://img.shields.io/badge/Action-lacan--scan%40v7-2088FF?logo=githubactions&logoColor=white" alt="GitHub Action @v7" /></a>
@@ -69,7 +69,7 @@ jobs:
           category: lacan
 ```
 
-The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.2"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
+The Action downloads a checksum-verified release binary. It does not compile Lacan Scan on the runner. Pin floating major `@v7` (tracks `v7.*`; earlier majors `@v1`–`@v6` remain). Pin binary `version: "7.2.3"` for a fixed artifact. PR workflows need `fetch-depth: 0` (or enough history) so `changed-base` resolves. A `.lacan.toml` in the scanned path is loaded automatically (or set `config:` / `skip-rules:`).
 
 **Marketplace listing:** [lacan-scan](https://github.com/marketplace/actions/lacan-scan) (README images use tagged assets for reliable rendering).
 
@@ -231,6 +231,12 @@ CLI `--skip-rules` is **merged with** config `skip-rules` (both apply). Inline c
 
 All v1 and v2 rules remain enabled by default. See prior release notes for rule tables (AIS001–AIS504).
 
+### v7.2.3
+
+No new rules. AIS102 no longer treats a bare "system prompt:" label as an instruction override, and a finding is HIGH only when the matched line is in an HTML comment or an `alt` attribute. The three override phrases are unchanged. Same `@v7` line.
+
+AIS102 recount on the nine v7.2.2 repositories that had findings: see below. browser-use at `e717df18` drops from 1 to 0.
+
 ### v7.2.2
 
 No new rules. AIS202 pass/fail fixtures (committed weight over 1 MiB, small weight, LFS pointer). Precision baseline for AIS102, AIS104, and AIS301 on 20 public repositories, plus one large-repo timing. Same `@v7` line.
@@ -354,6 +360,24 @@ lacan **7.2.2**, shallow `git clone --depth 1`, `lacan scan . --fail-on LOW --ou
 
 Aggregate precision on reviewed sample: **AIS102** 0/73 (0.000, 9 unclear excluded); **AIS104** 0/3 (0.000); **AIS301** n/a (no findings).
 
+### AIS102 recount (14 November 2026)
+
+lacan **7.2.3**, same procedure as the 7.2.2 baseline: recorded commit per repository (`git fetch --depth 1 origin <sha>`), `lacan scan . --fail-on LOW --output json --soft-fail`. Hand labels on up to the first 15 AIS102 findings per repository (`tp`, `fp`, `unclear`; precision uses `tp/(tp+fp)`, unclear excluded). Spot-check: `huggingface/smolagents` at `96f33faa` still reports zero AIS102. All nine repositories that had AIS102 findings on 7.2.2 were rescanned at the recorded SHAs.
+
+| Repository | Commit (short) | s (7.2.3) | AIS102 (7.2.2 → 7.2.3) | Reviewed (tp / fp / unclear) |
+| --- | --- | ---: | ---: | --- |
+| `BerriAI/litellm` | `d81c55f4` | 834 | 51 → 46 | 0 tp / 15 fp / 0 unclear |
+| `continuedev/continue` | `5522c6f4` | 94 | 1 → 0 | — |
+| `pydantic/pydantic-ai` | `86d9ad92` | 496 | 44 → 20 | 0 tp / 15 fp / 0 unclear |
+| `crewAIInc/crewAI` | `d7dfa0ef` | 716 | 67 → 8 | 0 tp / 8 fp / 0 unclear |
+| `browser-use/browser-use` | `e717df18` | 8 | 1 → 0 | — |
+| `promptfoo/promptfoo` | `45f68f0d` | 225 | 35 → 33 | 0 tp / 15 fp / 0 unclear |
+| `All-Hands-AI/OpenHands` | `830c0459` | 103 | 1 → 0 | — |
+| `FlowiseAI/Flowise` | `9291856d` | 81 | 5 → 4 | 0 tp / 4 fp / 0 unclear |
+| `mudler/LocalAI` | `e44f1f1d` | 311 | 14 → 6 | 0 tp / 6 fp / 0 unclear |
+
+Nine-repo AIS102 total: **219 → 117**. Aggregate precision on the reviewed recount sample: **AIS102** 0/63 (0.000).
+
 Large single-repo timing: `langchain-ai/langchain` shallow clone, `lacan scan . --fail-on HIGH --output json --soft-fail`, **125.87 s** wall time, 0 failed checks at HIGH.
 
 ## Develop / test
@@ -394,9 +418,9 @@ Release process for maintainers: see `~/AGENTS.md` (*Lacan Scan release playbook
 | **v4** | `.lacan.toml` + inline skip comments, Action `@v4` |
 | **v5** | AIS106, AIS108, AIS109 (templates and hidden encodings), Action `@v5` |
 | **v6** | AIS208–210, AIS304; 6.1.0 adds experimental AIS107, AIS110, AIS205–207, AIS211. Action `@v6` |
-| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch; 7.2.2 precision baseline. Action `@v7` |
+| **v7** | AIS301 flow; 7.1.0 AIS002 experimental; 7.2.0 AIS104 experimental; 7.2.1 fixture patch; 7.2.2 precision baseline; 7.2.3 AIS102 patch. Action `@v7` |
 
-Tag `v7.2.2` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
+Tag `v7.2.3` (semver) or any `v7.*.*` tag triggers `.github/workflows/release.yml`, uploads platform tarballs, publishes the GitHub Release, and moves floating tag `v7` → that commit.
 
 See [Milestones](https://github.com/jose-compu/lacan-scan/milestones). Planned releases (v4 and later) are in [ROADMAP.md](ROADMAP.md).
 
