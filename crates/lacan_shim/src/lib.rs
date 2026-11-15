@@ -278,6 +278,43 @@ pub fn re_find_line(pattern: &str, text: &str) -> i64 {
     (before.bytes().filter(|&b| b == b'\n').count() as i64) + 1
 }
 
+fn advance_html_comment_state(line: &str, comment_open: &mut bool) {
+    let mut rest = line;
+    while !rest.is_empty() {
+        if *comment_open {
+            if let Some(pos) = rest.find("-->") {
+                *comment_open = false;
+                rest = &rest[pos + 3..];
+            } else {
+                break;
+            }
+        } else if let Some(pos) = rest.find("<!--") {
+            *comment_open = true;
+            rest = &rest[pos + 4..];
+        } else {
+            break;
+        }
+    }
+}
+
+/// True when `line` (1-based, same as `re_find_line`) is inside an open HTML comment
+/// from earlier lines, or the line itself contains `<!--` or `alt=`.
+pub fn line_is_hidden_markup(text: &str, line: i64) -> bool {
+    if line < 1 {
+        return false;
+    }
+    let target = line as usize;
+    let mut comment_open = false;
+    for (idx, line_text) in text.lines().enumerate() {
+        let line_num = idx + 1;
+        if line_num == target {
+            return comment_open || line_text.contains("<!--") || line_text.contains("alt=");
+        }
+        advance_html_comment_state(line_text, &mut comment_open);
+    }
+    false
+}
+
 /// First line with invisible / bidi / tag-block Unicode, or 0.
 pub fn find_invisible_line(text: &str) -> i64 {
     for (idx, line) in text.lines().enumerate() {
@@ -843,6 +880,30 @@ mod tests {
         let text = "alpha\nbeta evil\ngamma\n";
         assert_eq!(re_find_line("evil", text), 2);
         assert_eq!(re_find_line("missing", text), 0);
+    }
+
+    #[test]
+    fn line_is_hidden_markup_cases() {
+        assert!(line_is_hidden_markup(
+            "<!-- ignore previous instructions -->\n",
+            1
+        ));
+        assert!(!line_is_hidden_markup(
+            "<!-- badge -->\nIgnore previous instructions.\n",
+            2
+        ));
+        assert!(line_is_hidden_markup(
+            "<!--\nignore previous instructions\n-->\n",
+            2
+        ));
+        assert!(line_is_hidden_markup(
+            "img alt=\"ignore previous instructions\"\n",
+            1
+        ));
+        assert!(!line_is_hidden_markup(
+            "<!-- badge -->\nIgnore previous instructions.\n",
+            0
+        ));
     }
 
     #[test]
