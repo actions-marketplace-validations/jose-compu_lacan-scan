@@ -205,6 +205,44 @@ pub ais003(path, text) -> vec<Finding> = {
     }
 }
 
+pub ais004(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS004") {
+        out
+    } else {
+        base := path_basename(path)
+        if base == "package.json" {
+            line := re_find_line("(?i)\"(preinstall|postinstall|install)\"\\s*:", text)
+            if line > 0 {
+                push(out, make_finding(
+                    "AIS004",
+                    Severity.Medium,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    line,
+                    "npm lifecycle script preinstall, install, or postinstall (experimental)"
+                ))
+            }
+        }
+        if base == "setup.py" {
+            line := re_find_line("(?i)\\bcmdclass\\s*=", text)
+            if line > 0 {
+                push(out, make_finding(
+                    "AIS004",
+                    Severity.Medium,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    line,
+                    "setup.py sets cmdclass (experimental)"
+                ))
+            }
+        }
+        out
+    }
+}
+
 pub ais008(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS008") {
@@ -274,6 +312,7 @@ pub ais401(path, text) -> vec<Finding> = {
 
 pub scan_agent(path, text) -> vec<Finding> = {
     acc := concat_findings(ais001(path, text), ais003(path, text))
+    acc = concat_findings(acc, ais004(path, text))
     acc = concat_findings(acc, ais002(path, text))
     acc = concat_findings(acc, ais008(path, text))
     concat_findings(acc, ais401(path, text))
@@ -413,4 +452,59 @@ test "ais003 respects skip" = {
     text := "# lacan:skip=AIS003:reason\n{\n  \"runOptions\": { \"runOn\": \"folderOpen\" }\n}\n"
     fs := ais003("repo/.vscode/tasks.json", text)
     assert_eq(len(fs), 0)
+}
+
+test "ais004 fail fixture package.json" = {
+    text := read_text("../../fixtures/AIS004/fail/package.json", 100000)
+    fs := ais004("repo/package.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS004")
+    assert_eq(fs[0].line > 0, true)
+}
+
+test "ais004 fail fixture setup.py" = {
+    text := read_text("../../fixtures/AIS004/fail/setup.py", 100000)
+    fs := ais004("repo/setup.py", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS004")
+    assert_eq(fs[0].line > 0, true)
+}
+
+test "ais004 install script key hits" = {
+    text := read_text("../../fixtures/AIS004/fail/install-key.json", 100000)
+    fs := ais004("repo/package.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS004")
+}
+
+test "ais004 pass fixture package.json" = {
+    text := read_text("../../fixtures/AIS004/pass/package.json", 100000)
+    fs := ais004("repo/package.json", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais004 pass fixture setup.py" = {
+    text := read_text("../../fixtures/AIS004/pass/setup.py", 100000)
+    fs := ais004("repo/setup.py", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais004 wrong basename is clean" = {
+    text := read_text("../../fixtures/AIS004/fail/package.json", 100000)
+    assert_eq(len(ais004("src/package-lock.json", text)), 0)
+    note := read_text("../../fixtures/AIS004/pass/note.md", 100000)
+    assert_eq(len(ais004("docs/note.md", note)), 0)
+}
+
+test "ais004 respects skip" = {
+    text := "# lacan:skip=AIS004:reason\n{\n  \"scripts\": { \"postinstall\": \"node hook.js\" }\n}\n"
+    fs := ais004("package.json", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais004 scan_agent fail package.json" = {
+    text := read_text("../../fixtures/AIS004/fail/package.json", 100000)
+    fs := scan_agent("repo/package.json", text)
+    assert_eq(len(fs) >= 1, true)
+    assert_eq(fs[0].id, "AIS004")
 }

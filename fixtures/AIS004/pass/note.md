@@ -1,0 +1,1 @@
+This note mentions `"postinstall":` and cmdclass = in prose. Lacan should not match because the basename is not package.json or setup.py.

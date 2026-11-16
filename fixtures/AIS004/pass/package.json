@@ -1,0 +1,7 @@
+{
+  "name": "ais004-pass-demo",
+  "scripts": {
+    "test": "pytest",
+    "build": "npm install && npm run compile"
+  }
+}
