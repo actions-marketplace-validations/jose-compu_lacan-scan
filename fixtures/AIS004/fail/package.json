@@ -1,0 +1,7 @@
+{
+  "name": "ais004-fail-demo",
+  "scripts": {
+    "preinstall": "node hook.js",
+    "postinstall": "node hook.js"
+  }
+}

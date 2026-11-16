@@ -212,6 +212,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **7.3.0** adds experimental `AIS003` ([#7](https://github.com/jose-compu/lacan-scan/issues/7)): `.vscode/tasks.json` with `runOn` set to `folderOpen`. Reported; does not fail the job.
 
+**7.4.0** adds experimental `AIS004` ([#8](https://github.com/jose-compu/lacan-scan/issues/8)): `package.json` lifecycle scripts `preinstall`, `install`, or `postinstall`, and `setup.py` `cmdclass`. Reported; does not fail the job.
+
 **7.2.1** adds pass/fail fixtures for `AIS103`, `AIS302`, `AIS303`, and `AIS502`. No new rule ids.
 
 The L5 goal is still to connect sources to sinks and report paths. What shipped is same-function or same-step only. The table is leftover scope, not the next sprint.
@@ -229,7 +231,7 @@ The L5 goal is still to connect sources to sinks and report paths. What shipped 
 
 ### Next — one experimental rule
 
-[#4](https://github.com/jose-compu/lacan-scan/issues/4) baseline is recorded in 7.2.2. The next minor is one experimental file-regex rule, `AIS004` ([#8](https://github.com/jose-compu/lacan-scan/issues/8)). After that, file-regex only: `AIS009`, `AIS006`, `AIS503`, `AIS007`, `AIS005`. `AIS201` waits on a binary-safe read ([#26](https://github.com/jose-compu/lacan-scan/issues/26)).
+[#4](https://github.com/jose-compu/lacan-scan/issues/4) baseline is recorded in 7.2.2. The next experimental file-regex rule is `AIS009` ([#12](https://github.com/jose-compu/lacan-scan/issues/12)), then `AIS006`, `AIS503`, `AIS007`, `AIS005`. `AIS201` waits on a binary-safe read ([#26](https://github.com/jose-compu/lacan-scan/issues/26)).
 
 Parked until that queue moves: `AIS601`, `AIS602`, `--baseline` (the baseline is the gate before any experimental rule becomes blocking), `AIS402` / `AIS403`, the v4 batch `AIS010`–`AIS013` and `AIS505` / `AIS506`, Marketplace, and v8 live probing.
 

@@ -111,6 +111,15 @@ jobs:
           body: |
             AI-safety static scanner for Git repositories.
 
+            ## 7.4.0
+
+            Experimental AIS004 (MEDIUM). Reported, and it never fails the job. Same @v7 line.
+
+            - package.json scripts preinstall, install, and postinstall
+            - setup.py cmdclass
+
+            A build script that only runs npm install, and the same words outside those two filenames, are clean. Fixes #8.
+
             ## GitHub Action
             ```yaml
             - uses: jose-compu/lacan-scan@v7
@@ -124,7 +133,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.3.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
+            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.4.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:

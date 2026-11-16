@@ -1,0 +1,6 @@
+{
+  "name": "install-key-only",
+  "scripts": {
+    "install": "node-gyp rebuild"
+  }
+}
