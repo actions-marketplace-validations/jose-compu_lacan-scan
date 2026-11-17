@@ -205,6 +205,43 @@ pub ais003(path, text) -> vec<Finding> = {
     }
 }
 
+ais009_shell_startup(base) = {
+    base == ".bashrc" || base == ".bash_profile" || base == ".bash_login" || base == ".profile" || base == ".zshrc" || base == ".zprofile" || base == ".zshenv" || base == ".zlogin" || base == ".kshrc" || base == ".cshrc" || base == ".tcshrc"
+}
+
+ais009_cron_path(path) = {
+    str_contains(path, "/cron.d/") || str_contains(path, "/cron.daily/") || str_contains(path, "/cron.hourly/") || str_contains(path, "/cron.weekly/") || str_contains(path, "/cron.monthly/") || str_starts_with(path, "cron.d/") || str_starts_with(path, "cron.daily/") || str_starts_with(path, "cron.hourly/") || str_starts_with(path, "cron.weekly/") || str_starts_with(path, "cron.monthly/")
+}
+
+pub ais009(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS009") {
+        out
+    } else {
+        base := str_to_lower(path_basename(path))
+        msg mut:= ""
+        if base == "authorized_keys" || base == "authorized_keys2" {
+            msg = "Committed authorized_keys file (experimental)"
+        } else if ais009_shell_startup(base) {
+            msg = "Committed shell startup file (experimental)"
+        } else if base == "crontab" || base == ".crontab" || ais009_cron_path(path) {
+            msg = "Committed crontab (experimental)"
+        }
+        if msg != "" {
+            push(out, make_finding(
+                "AIS009",
+                Severity.Medium,
+                "2.1",
+                "AML.T0010.000",
+                path,
+                1,
+                msg
+            ))
+        }
+        out
+    }
+}
+
 pub ais004(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS004") {
@@ -313,6 +350,7 @@ pub ais401(path, text) -> vec<Finding> = {
 pub scan_agent(path, text) -> vec<Finding> = {
     acc := concat_findings(ais001(path, text), ais003(path, text))
     acc = concat_findings(acc, ais004(path, text))
+    acc = concat_findings(acc, ais009(path, text))
     acc = concat_findings(acc, ais002(path, text))
     acc = concat_findings(acc, ais008(path, text))
     concat_findings(acc, ais401(path, text))
@@ -507,4 +545,80 @@ test "ais004 scan_agent fail package.json" = {
     fs := scan_agent("repo/package.json", text)
     assert_eq(len(fs) >= 1, true)
     assert_eq(fs[0].id, "AIS004")
+}
+
+test "ais009 fail authorized_keys" = {
+    text := read_text("../../fixtures/AIS009/fail/.ssh/authorized_keys", 100000)
+    fs := ais009("repo/.ssh/authorized_keys", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+    assert_eq(fs[0].line > 0, true)
+}
+
+test "ais009 fail authorized_keys2" = {
+    fs := ais009("authorized_keys2", "ssh-rsa AAA\n")
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+    assert_eq(fs[0].line > 0, true)
+}
+
+test "ais009 fail bashrc" = {
+    text := read_text("../../fixtures/AIS009/fail/.bashrc", 100000)
+    fs := ais009(".bashrc", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+}
+
+test "ais009 fail zshrc and bash_profile" = {
+    fs1 := ais009(".zshrc", "echo hi\n")
+    fs2 := ais009(".bash_profile", "echo hi\n")
+    assert_eq(len(fs1), 1)
+    assert_eq(fs1[0].id, "AIS009")
+    assert_eq(len(fs2), 1)
+    assert_eq(fs2[0].id, "AIS009")
+}
+
+test "ais009 fail crontab" = {
+    text := read_text("../../fixtures/AIS009/fail/crontab", 100000)
+    fs := ais009("crontab", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+}
+
+test "ais009 fail cron.d segment" = {
+    text := read_text("../../fixtures/AIS009/fail/cron.d/persist", 100000)
+    fs := ais009("repo/cron.d/persist", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+}
+
+test "ais009 lowercase basename" = {
+    fs := ais009(".BASHRC", "echo hi\n")
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
+}
+
+test "ais009 pass note mentions names" = {
+    note := read_text("../../fixtures/AIS009/pass/note.md", 100000)
+    fs := ais009("docs/note.md", note)
+    assert_eq(len(fs), 0)
+}
+
+test "ais009 pass wrong basenames" = {
+    assert_eq(len(ais009("src/profile.py", "def profile(): pass\n")), 0)
+    assert_eq(len(ais009("src/crontab.py", "def crontab(): pass\n")), 0)
+    assert_eq(len(ais009("home/authorized_keys.bak", "ssh-rsa AAA\n")), 0)
+    assert_eq(len(ais009("docs/cron.daily-notes.md", "# notes\n")), 0)
+}
+
+test "ais009 respects skip" = {
+    fs := ais009(".bashrc", "# lacan:skip=AIS009:reason\necho hi\n")
+    assert_eq(len(fs), 0)
+}
+
+test "ais009 scan_agent fail bashrc" = {
+    text := read_text("../../fixtures/AIS009/fail/.bashrc", 100000)
+    fs := scan_agent("repo/.bashrc", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS009")
 }
