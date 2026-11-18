@@ -242,6 +242,71 @@ pub ais009(path, text) -> vec<Finding> = {
     }
 }
 
+ais006_mcp_basename(base) = {
+    base == "mcp.json" || base == ".mcp.json" || base == "claude_desktop_config.json"
+}
+
+ais006_has_pin(chunk) = {
+    re_is_match("@\\d", chunk) || re_is_match("==\\d", chunk)
+}
+
+ais006_chunk_remote(chunk) = {
+    re_is_match("(?i)\"url\"\\s*:\\s*\"https?://", chunk) ||
+        re_is_match("(?i)\"command\"\\s*:\\s*\"https?://", chunk) ||
+        (str_contains(str_to_lower(chunk), "mcp-remote") &&
+            (str_contains(chunk, "http://") || str_contains(chunk, "https://")))
+}
+
+ais006_line_launches_package(line) = {
+    re_is_match("(?i)\"command\"\\s*:\\s*\"(npx|uvx|pipx)\"", line)
+}
+
+ais006_command_chunk_unpinned(line, chunk) = {
+    ais006_line_launches_package(line) && re_is_match("(?i)\\b(npx|uvx|pipx)\\b", chunk) && !ais006_has_pin(chunk)
+}
+
+pub ais006(path, text) -> vec<Finding> = {
+    out := new()
+    if has_skip(text, "AIS006") {
+        out
+    } else {
+        base := str_to_lower(path_basename(path))
+        if ais006_mcp_basename(base) {
+            lines := split_lines(text)
+            hit_line mut:= 0
+            hit_msg mut:= ""
+            i mut:= 0
+            while i < len(lines) && hit_line == 0 {
+                chunk mut:= lines[i]
+                if i + 1 < len(lines) {
+                    chunk = lines[i] ++ "\n" ++ lines[i + 1]
+                }
+                lineno := i + 1
+                if ais006_chunk_remote(chunk) {
+                    hit_line = lineno
+                    hit_msg = "MCP config points at a remote URL (experimental)"
+                } else if ais006_command_chunk_unpinned(lines[i], chunk) {
+                    hit_line = lineno
+                    hit_msg = "MCP config launches an unpinned package (experimental)"
+                }
+                i = i + 1
+            }
+            if hit_line > 0 {
+                push(out, make_finding(
+                    "AIS006",
+                    Severity.Medium,
+                    "2.1",
+                    "AML.T0010.000",
+                    path,
+                    hit_line,
+                    hit_msg
+                ))
+            }
+        }
+        out
+    }
+}
+
 pub ais004(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS004") {
@@ -351,6 +416,7 @@ pub scan_agent(path, text) -> vec<Finding> = {
     acc := concat_findings(ais001(path, text), ais003(path, text))
     acc = concat_findings(acc, ais004(path, text))
     acc = concat_findings(acc, ais009(path, text))
+    acc = concat_findings(acc, ais006(path, text))
     acc = concat_findings(acc, ais002(path, text))
     acc = concat_findings(acc, ais008(path, text))
     concat_findings(acc, ais401(path, text))
@@ -621,4 +687,63 @@ test "ais009 scan_agent fail bashrc" = {
     fs := scan_agent("repo/.bashrc", text)
     assert_eq(len(fs), 1)
     assert_eq(fs[0].id, "AIS009")
+}
+
+test "ais006 fail fixture mcp.json" = {
+    text := read_text("../../fixtures/AIS006/fail/mcp.json", 100000)
+    fs := ais006("repo/mcp.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS006")
+}
+
+test "ais006 fail fixture dot-mcp.json" = {
+    text := read_text("../../fixtures/AIS006/fail/dot-mcp/.mcp.json", 100000)
+    fs := ais006("repo/.mcp.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS006")
+}
+
+test "ais006 fail claude_desktop_config" = {
+    text := read_text("../../fixtures/AIS006/fail/claude_desktop_config.json", 100000)
+    fs := ais006("claude_desktop_config.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS006")
+}
+
+test "ais006 pass fixture mcp.json" = {
+    text := read_text("../../fixtures/AIS006/pass/mcp.json", 100000)
+    fs := ais006("repo/mcp.json", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais006 wrong basename is clean" = {
+    text := read_text("../../fixtures/AIS006/fail/mcp.json", 100000)
+    assert_eq(len(ais006("docs/note.md", text)), 0)
+    assert_eq(len(ais006("package.json", text)), 0)
+}
+
+test "ais006 pass note.md" = {
+    text := read_text("../../fixtures/AIS006/pass/note.md", 100000)
+    fs := ais006("docs/note.md", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais006 respects skip" = {
+    text := "# lacan:skip=AIS006:reason\n{\n  \"mcpServers\": {\n    \"x\": { \"command\": \"npx\", \"args\": [\"-y\", \"pkg\"] }\n  }\n}\n"
+    fs := ais006("mcp.json", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais006 scan_agent fail mcp.json" = {
+    text := read_text("../../fixtures/AIS006/fail/mcp.json", 100000)
+    fs := scan_agent("repo/mcp.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS006")
+}
+
+test "ais006 pinned then unpinned servers" = {
+    text := read_text("../../fixtures/AIS006/fail/two-servers.json", 100000)
+    fs := ais006("mcp.json", text)
+    assert_eq(len(fs), 1)
+    assert_eq(fs[0].id, "AIS006")
 }

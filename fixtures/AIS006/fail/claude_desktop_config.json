@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bridge": {
+      "command": "mcp-remote",
+      "args": ["https://example.invalid/sse"]
+    }
+  }
+}
