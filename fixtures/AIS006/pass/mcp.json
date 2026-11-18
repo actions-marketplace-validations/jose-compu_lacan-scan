@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "local": {
+      "command": "node",
+      "args": ["/opt/mcp/server.js"]
+    },
+    "pinned": {
+      "command": "npx",
+      "args": ["-y", "pkg@1.2.3"]
+    }
+  },
+  "$schema": "https://example.invalid/mcp-schema.json"
+}

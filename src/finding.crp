@@ -67,7 +67,7 @@ pub has_skip(text, rule_id) = {
 
 -- Experimental rules report but never fail the job (v6 ROADMAP).
 pub is_experimental(rule_id) = {
-    str_eq_ignore_case(rule_id, "AIS002") || str_eq_ignore_case(rule_id, "AIS003") || str_eq_ignore_case(rule_id, "AIS004") || str_eq_ignore_case(rule_id, "AIS009") || str_eq_ignore_case(rule_id, "AIS104") || str_eq_ignore_case(rule_id, "AIS107") || str_eq_ignore_case(rule_id, "AIS110") || str_eq_ignore_case(rule_id, "AIS205") || str_eq_ignore_case(rule_id, "AIS206") || str_eq_ignore_case(rule_id, "AIS207") || str_eq_ignore_case(rule_id, "AIS208") || str_eq_ignore_case(rule_id, "AIS209") || str_eq_ignore_case(rule_id, "AIS211")
+    str_eq_ignore_case(rule_id, "AIS002") || str_eq_ignore_case(rule_id, "AIS003") || str_eq_ignore_case(rule_id, "AIS004") || str_eq_ignore_case(rule_id, "AIS006") || str_eq_ignore_case(rule_id, "AIS009") || str_eq_ignore_case(rule_id, "AIS104") || str_eq_ignore_case(rule_id, "AIS107") || str_eq_ignore_case(rule_id, "AIS110") || str_eq_ignore_case(rule_id, "AIS205") || str_eq_ignore_case(rule_id, "AIS206") || str_eq_ignore_case(rule_id, "AIS207") || str_eq_ignore_case(rule_id, "AIS208") || str_eq_ignore_case(rule_id, "AIS209") || str_eq_ignore_case(rule_id, "AIS211")
 }
 
 pub meets_fail_on(finding, fail_on) = {
@@ -188,6 +188,7 @@ test "experimental rules never fail exit gate" = {
     assert_eq(is_experimental("AIS003"), true)
     assert_eq(is_experimental("AIS004"), true)
     assert_eq(is_experimental("AIS009"), true)
+    assert_eq(is_experimental("AIS006"), true)
     assert_eq(is_experimental("AIS008"), false)
     f003 := make_finding("AIS003", Severity.High, "2.1", "AML.T0010.000", ".vscode/tasks.json", 1, "exp")
     assert_eq(meets_exit_fail_on(f003, Severity.High), false)
@@ -195,6 +196,8 @@ test "experimental rules never fail exit gate" = {
     assert_eq(meets_exit_fail_on(f004, Severity.Low), false)
     f009 := make_finding("AIS009", Severity.Medium, "2.1", "AML.T0010.000", ".bashrc", 1, "exp")
     assert_eq(meets_exit_fail_on(f009, Severity.Low), false)
+    f006 := make_finding("AIS006", Severity.Medium, "2.1", "AML.T0010.000", "mcp.json", 1, "exp")
+    assert_eq(meets_exit_fail_on(f006, Severity.Low), false)
     assert_eq(meets_fail_on(f, Severity.Low), true)
     assert_eq(meets_exit_fail_on(f, Severity.Low), false)
     assert_eq(count_exit_failing(singleton_finding(f), Severity.Low), 0)
