@@ -111,17 +111,13 @@ jobs:
           body: |
             AI-safety static scanner for Git repositories.
 
-            ## 7.6.0
+            ## 7.6.1
 
-            Experimental AIS006 (MEDIUM). Reported, and it never fails the job. Same @v7 line.
+            No new rules. Same @v7 line. Two HIGH false positives.
 
-            In mcp.json, .mcp.json, or claude_desktop_config.json:
+            AIS008 no longer reports a curl or wget pipe into sh or bash when every https URL on that line is an official installer: host sh.rustup.rs, rustup.rs, or www.rustup.rs, or https://github.com/axodotdev/cargo-dist/releases/download/…. Any other URL on the line stays HIGH, including other GitHub release installers. /dev/tcp, nc -e, and ncat -e are unchanged. Fixes #88.
 
-            - unpinned npx, uvx, or pipx (no @1.2.3 and no ==1.2.3; a scope alone is not a pin)
-            - remote url or command using http:// or https://
-            - mcp-remote with an http(s) URL
-
-            A local node or python command, a pinned package, and the same words in any other filename are clean. Suppress with lacan:skip=AIS006 or .lacan.toml. Fixes #10.
+            AIS101 no longer reports a single U+200D ZERO WIDTH JOINER in prose, or a ZWJ used as an emoji joiner. A ZWJ between ASCII identifier characters, two or more non-emoji ZWJs, a zero-width space, and bidi or tag characters stay HIGH. Fixes #89.
 
             ## GitHub Action
             ```yaml
@@ -136,7 +132,7 @@ jobs:
                 changed-base: "<pull_request.base.sha>"
             ```
 
-            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.6.0"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
+            Floating major tag `v7` tracks the current release line (`v1`–`v6` remain for earlier rule sets). Pin `version: "7.6.1"` for a fixed binary. Drop `.lacan.toml` in the repo to skip false positives.
       # Keep floating major tags (v1, v2, …) for `uses: jose-compu/lacan-scan@v1`.
       - name: Update major version tag
         env:

