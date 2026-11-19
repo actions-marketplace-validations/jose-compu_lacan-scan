@@ -1023,6 +1023,7 @@ pub fn config_ignores(text: &str, rule_id: &str, path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    // lacan:skip=AIS008:trusted installer examples in pipe_line_trusted tests
     use super::*;
 
     #[test]

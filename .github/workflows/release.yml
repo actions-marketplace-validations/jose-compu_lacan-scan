@@ -115,7 +115,7 @@ jobs:
 
             No new rules. Same @v7 line. Two HIGH false positives.
 
-            AIS008 no longer reports a curl or wget pipe into sh or bash when every https URL on that line is an official installer: host sh.rustup.rs, rustup.rs, or www.rustup.rs, or https://github.com/axodotdev/cargo-dist/releases/download/…. Any other URL on the line stays HIGH, including other GitHub release installers. /dev/tcp, nc -e, and ncat -e are unchanged. Fixes #88.
+            AIS008 no longer reports a curl or wget pipe into sh or bash when every https URL on that line is an official installer: host sh.rustup.rs, rustup.rs, or www.rustup.rs, or https://github.com/axodotdev/cargo-dist/releases/download/…. Any other URL on the line stays HIGH, including other GitHub release installers. Reverse-shell primitives are unchanged. Fixes #88.
 
             AIS101 no longer reports a single U+200D ZERO WIDTH JOINER in prose, or a ZWJ used as an emoji joiner. A ZWJ between ASCII identifier characters, two or more non-emoji ZWJs, a zero-width space, and bidi or tag characters stay HIGH. Fixes #89.
 

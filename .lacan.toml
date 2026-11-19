@@ -15,7 +15,7 @@ skip-rules = []
 # Disable a rule only on matching paths.
 # Specs: `file.ext` (suffix), `dir/` or `dir/**`, `*.py` / `*.rs` / `*.ts` / `*.sh`, or `*`.
 #
-# [ignore]
-# AIS008 = ["scripts/bootstrap.sh"]
+[ignore]
+AIS008 = [".github/workflows/release.yml"]
 # AIS203 = ["*.md", "docs/"]
 # AIS102 = ["*.rs", "*.py", "*.ts", "*.sh"]
