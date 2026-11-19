@@ -22,6 +22,7 @@ extern rust lacan_shim {
     line_is_hidden_markup(text: str, line: int) -> bool
     ngram_count(text: str, ngram: str) -> int
     find_invisible_line(text: str) -> int
+    pipe_line_trusted(line: str) -> bool
     decode_hidden_payloads(text: str) -> vec<str>
     json_escape(s: str) -> str
     xml_escape(s: str) -> str

