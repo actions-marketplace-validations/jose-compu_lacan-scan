@@ -351,6 +351,39 @@ test "ais101 clean ascii" = {
     assert_eq(len(fs), 0)
 }
 
+test "ais101 tos isolated zwj clean" = {
+    text := read_text("../../fixtures/AIS101/pass/tos.js", 100000)
+    fs := ais101("src/routes/tos.js", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais101 emoji zwj clean" = {
+    text := read_text("../../fixtures/AIS101/pass/emoji.md", 100000)
+    fs := ais101("emoji.md", text)
+    assert_eq(len(fs), 0)
+}
+
+test "ais101 split identifier zwj" = {
+    text := read_text("../../fixtures/AIS101/fail/split.md", 100000)
+    fs := ais101("split.md", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS101")
+}
+
+test "ais101 bidi override" = {
+    text := read_text("../../fixtures/AIS101/fail/bidi.md", 100000)
+    fs := ais101("bidi.md", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS101")
+}
+
+test "ais101 dense zwj" = {
+    text := read_text("../../fixtures/AIS101/fail/dense.md", 100000)
+    fs := ais101("dense.md", text)
+    assert_eq(len(fs) > 0, true)
+    assert_eq(fs[0].id, "AIS101")
+}
+
 test "ais106 template injection" = {
     fs := ais106("tokenizer/chat_template.jinja", "x.__class__.__mro__\n")
     assert_eq(len(fs) > 0, true)

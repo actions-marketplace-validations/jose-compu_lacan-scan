@@ -1,0 +1,7 @@
+name: rustup
+on: workflow_dispatch
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y

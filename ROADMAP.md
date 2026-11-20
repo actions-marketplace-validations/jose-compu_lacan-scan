@@ -218,6 +218,8 @@ Judge datasets and artifacts as a whole, not line by line. **Shipped in 6.0.0:**
 
 **7.6.0** adds experimental `AIS006` ([#10](https://github.com/jose-compu/lacan-scan/issues/10)): MCP config with unpinned `npx` / `uvx` / `pipx`, or a remote `url` / `command` / `mcp-remote` http(s) target in `mcp.json`, `.mcp.json`, or `claude_desktop_config.json`. Reported; does not fail the job.
 
+**7.6.1** narrows two HIGH rules. AIS008 skips an allowlisted official installer line (`sh.rustup.rs` / `rustup.rs` / `www.rustup.rs`, and `github.com/axodotdev/cargo-dist/releases/download/`). AIS101 skips an isolated U+200D in prose and emoji ZWJ sequences. No new rule ids. Fixes [#88](https://github.com/jose-compu/lacan-scan/issues/88) and [#89](https://github.com/jose-compu/lacan-scan/issues/89).
+
 **7.2.1** adds pass/fail fixtures for `AIS103`, `AIS302`, `AIS303`, and `AIS502`. No new rule ids.
 
 The L5 goal is still to connect sources to sinks and report paths. What shipped is same-function or same-step only. The table is leftover scope, not the next sprint.
